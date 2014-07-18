@@ -1,0 +1,15 @@
+{
+  "name": "typeInferenceNodeDomain",
+  "title": "Database Domain for Type Inference for Brackets",
+  "description": "This node module provides a Node Domain to Brakcets which abstracts access to a NeDB Database",
+  "homepage": "",
+  "version": "0.0.1",
+  "author": "Jan-Peter Kraemer <jpk@cs.rwth-aachen.de>",
+  "license": "MIT",
+  "dependencies": {
+    "nedb": "^0.10.6"
+  },
+  "engines": {
+    "brackets": ">=0.38.0"
+  }
+}
