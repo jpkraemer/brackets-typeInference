@@ -9,6 +9,9 @@
  * 		count: 	number or {min: number, max: number}	Required in typespecs in array specs. Used to signify repetition
  * 	}
  *
+ * Notifications
+ *
+ * didUpdateTypeInformation - triggered when new type information is put into the store.
  * 
  */
 
@@ -16,6 +19,7 @@ define(function (require, exports, module) {
 	"use strict"; 
 
 	var _ 					= require("./lib/lodash");
+	var Async				= brackets.getModule("utils/Async");
 	var ExtensionUtils 		= brackets.getModule("utils/ExtensionUtils");
 	var NodeDomain			= brackets.getModule("utils/NodeDomain");
 	var ProjectManager 		= brackets.getModule("project/ProjectManager");
@@ -28,6 +32,7 @@ define(function (require, exports, module) {
 
 	var projectRoot;
 	var projectTypeDatabaseHandle;
+	var queue;
 
 	function _init () {
 
@@ -40,6 +45,41 @@ define(function (require, exports, module) {
 		$(TheseusTypeProvider).on("didReceiveTypeInformation", _theseusDidReceiveTypeInformation); 
 	}
 
+	function _executeDatabaseCommand () {
+		if (!queue) {
+			queue = new Async.PromiseQueue();
+		}
+
+		var result = $.Deferred();
+		var originalArguments = Array.prototype.slice.apply(arguments);
+
+		queue.add(function () {
+			if (originalArguments[0] !== "connect") {
+				originalArguments.splice(1, 0, projectTypeDatabaseHandle);
+			}
+			return TIDatabase.exec.apply(TIDatabase, originalArguments)
+				.done(function () { result.resolve.apply(result, arguments); })
+				.fail(function () { result.reject.apply(result, arguments); });
+		});
+
+		return result.promise();
+	}
+
+	function typeInformationForFunctionIdentifer (functionIdentifier) {
+		var result = $.Deferred();
+
+		_executeDatabaseCommand("find", 
+			{ functionIdentifier: functionIdentifier }
+		).done(function (docs) {
+			result.resolve(docs);
+		}).fail(function (err) {
+			TIUtils.log("Error retrieving type information for function identifier " + functionIdentifier + ": " + err);
+			result.reject(err);
+		});
+
+		return result.promise();
+	}
+
 	function _projectOpened (event, projectRoot) {
 		TIUtils.log(projectRoot);
 	}
@@ -47,7 +87,7 @@ define(function (require, exports, module) {
 	function _projectChanged (newProject) { 
 		projectRoot = newProject;
 
-		TIDatabase.exec("connect", projectRoot.fullPath + "bracketsProject.db").done(function (handle) {
+		_executeDatabaseCommand("connect", projectRoot.fullPath + "bracketsProject.db").done(function (handle) {
 			projectTypeDatabaseHandle = handle;
 		}).fail(function (err) {
 			TIUtils.log("Error creating or loading database for project " + projectRoot.fullPath + " with Error: " + err);
@@ -68,7 +108,11 @@ define(function (require, exports, module) {
 			var result = results[i];
 
 			var functionIdentifier = result.nodeId;
+			var argumentNames = _.pluck(result.arguments, "name");
 			var argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
+			for (var j = 0; j < argumentTypes.length; j++) {
+				argumentTypes[j].name = argumentNames[j];
+			}
 
 			_updateTypeForFunctionWithTypesAndArguments(functionIdentifier, argumentTypes, result.arguments);
 		}
@@ -91,7 +135,7 @@ define(function (require, exports, module) {
 		};
 
 
-		TIDatabase.exec("find", projectTypeDatabaseHandle,
+		_executeDatabaseCommand("find", 
 			{ functionIdentifier: functionIdentifier }
 		).done(function (docs) {
 			var newTypes = types;
@@ -101,14 +145,16 @@ define(function (require, exports, module) {
 				}
 			}
 
-			TIDatabase.exec("update", projectTypeDatabaseHandle, 
+			_executeDatabaseCommand("update",  
 					{ functionIdentifier: functionIdentifier }, 
 					{ $set: { 
 						argumentTypes: newTypes,
 						lastArguments: argumentValues 
 					}},
 					{ upsert: true }
-				).done(successHandler).fail(errorHandler);
+				).done(function  (newDocs) {
+					$(exports).trigger("didUpdateTypeInformation", [newDocs]); 
+				}).fail(errorHandler);
 
 		}).fail(errorHandler); 
 	}
@@ -382,4 +428,6 @@ define(function (require, exports, module) {
 	exports.mergeTypeSpecs = _mergeTypeSpecs;
 	exports.forTests = {};
 	exports.forTests.mergeCounts = _mergeCounts;
+	exports.typeInformationForFunctionIdentifer = typeInformationForFunctionIdentifer;
+	exports.PRIMITIVE_TYPES = PRIMITIVE_TYPES;
 });
