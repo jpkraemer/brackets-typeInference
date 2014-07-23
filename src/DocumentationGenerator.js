@@ -4,7 +4,7 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 						= require("./lib/lodash");
+	var _ 						= brackets.getModule("thirdparty/lodash");
 	var TypeInformationStore 	= require("./TypeInformationStore");
 
 	/**

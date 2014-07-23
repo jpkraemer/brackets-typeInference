@@ -9,7 +9,7 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 				= require("./lib/lodash");
+	var _ 				= brackets.getModule("thirdparty/lodash");
 	var Agent 			= require("./theseus/Agent"); 
 	var AgentManager 	= require("./theseus/AgentManager");
 
