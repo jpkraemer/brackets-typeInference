@@ -7,6 +7,7 @@
   "author": "Jan-Peter Kraemer <jpk@cs.rwth-aachen.de>",
   "license": "MIT",
   "dependencies": {
+    "marked": "^0.3.2",
     "nedb": "^0.10.6"
   },
   "engines": {
