@@ -4,22 +4,44 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var InlineWidget 			= brackets.getModule("editor/InlineWidget").InlineWidget;
+	var InlineWidget 			       = brackets.getModule("editor/InlineWidget").InlineWidget;
+    var TypeInformationHTMLRenderer    = require("./TypeInformationHTMLRenderer");
+    var TypeInformationStore           = require("./TypeInformationStore");
+    var TIUtils                        = require("./TIUtils");
 
 	/**
 	 * @constructor
+     * @param {String} functionIdentifier The permanent identifier for the function whose documentation is rendered
+     * @param {Editor} hostEditor 
+     * @param {{line: number, ch: number}} startBookmark start of the function in the source code
+     * @param {{line: number, ch: number}} endBookmark end of the function in the source code
 	 */
-	function DocumentationInlineEditor (startBookmark, endBookmark) {
-		this._startBookmark 	= startBookmark; 
-		this._endBookmark 		= endBookmark; 
+	function DocumentationInlineEditor (functionIdentifier, hostEditor, startPos, endPos) {
+        this.functionIdentifier = functionIdentifier;
+		this._startBookmark 	= hostEditor._codeMirror.setBookmark(startPos); 
+		this._endBookmark 		= hostEditor._codeMirror.setBookmark(endPos);
 
 		InlineWidget.call(this);
+
+        TypeInformationStore.typeInformationForFunctionIdentifer(this.functionIdentifier).done(function (docs) {
+            if (docs.length === 0) {
+                return;
+            } else {
+                var typeInformation = docs[0];
+        
+                this.load(hostEditor);
+                this.updateTypeInformation(typeInformation);
+
+                hostEditor.addInlineWidget({ line: startPos.line - 1, ch: 0 }, this, true);        
+
+                $(TypeInformationStore).on("didUpdateTypeInformation", this._didUpdateTypeInformation.bind(this));
+            }
+        }.bind(this));
 	}
 
 	DocumentationInlineEditor.prototype = Object.create(InlineWidget.prototype);
 	DocumentationInlineEditor.prototype.constructor = DocumentationInlineEditor;
 	DocumentationInlineEditor.prototype.parentClass = InlineWidget.prototype;
-
 
 	/**
      * Start of the range of code we're attached to; _startBookmark.find() may by null if sync is lost.
@@ -34,6 +56,17 @@ define(function (require, exports, module) {
      */
     DocumentationInlineEditor.prototype._endBookmark = null;
 
+    /**
+     * A div to hold the actual content of the widget
+     * @type {jQueryObject}
+     */
+    DocumentationInlineEditor.prototype.$contentDiv = null;
+
+    /**
+     * The function identifier for which this widget displays information
+     * @type {String}
+     */
+    DocumentationInlineEditor.prototype.functionIdentifier = null;
 
 	/**
      * Returns the current text range of the color we're attached to, or null if
@@ -86,6 +119,11 @@ define(function (require, exports, module) {
      */
     DocumentationInlineEditor.prototype.load = function (hostEditor) {
         DocumentationInlineEditor.prototype.parentClass.load.apply(this, arguments);
+
+        this.$contentDiv = $("<div />")
+                                .addClass("ti-documentation-container")
+                                .css("margin-left", $(hostEditor._codeMirror.display.gutters).width());
+        this.$htmlContent.append(this.$contentDiv);
     };
 
     /**
@@ -98,8 +136,22 @@ define(function (require, exports, module) {
         this.hostEditor.setInlineWidgetHeight(this, 100, true);
     };
 
-    DocumentationInlineEditor.prototype.setContent = function (newContent) {
-        this.$htmlContent.append(newContent);
+    DocumentationInlineEditor.prototype._didUpdateTypeInformation = function(evt, newDoc) {
+        if (newDoc.functionIdentifier === this.functionIdentifier) {
+            this.updateTypeInformation(newDoc);
+        }
+    };
+
+    DocumentationInlineEditor.prototype.updateTypeInformation = function (typeInformation) {
+        if (this.functionIdentifier !== typeInformation.functionIdentifier) {
+            TIUtils.log("Inline widget for functionIdentifier "  + 
+                this.functionIdentifier + 
+                " updated with information for function identifier " + 
+                typeInformation.functionIdentifier + 
+                ". Aborting update!");
+        }
+
+        this.$contentDiv.html(TypeInformationHTMLRenderer.typeInformationToHTML(typeInformation));
     };
 
     module.exports = DocumentationInlineEditor;

@@ -5,10 +5,10 @@ define(function (require, exports, module) {
 	"use strict"; 
 
 	var AppInit						= brackets.getModule("utils/AppInit");
-	var DocumentationGenerator		= require("./src/DocumentationGenerator");
 	var DocumentationInlineEditor 	= require("./src/DocumentationInlineEditor");
 	var DocumentManger				= brackets.getModule("document/DocumentManager");
 	var EditorManager				= brackets.getModule("editor/EditorManager");
+	var ExtensionUtils				= brackets.getModule("utils/ExtensionUtils");
 	var JSUtils						= brackets.getModule("language/JSUtils");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
@@ -16,6 +16,9 @@ define(function (require, exports, module) {
 
 	function _init () {
 		TIUtils.log("loading... "); 
+
+		ExtensionUtils.loadStyleSheet(module, "main.css");
+
 		TypeInformationStore.init();
 		TheseusTypeProvider.init();
 
@@ -24,18 +27,17 @@ define(function (require, exports, module) {
 	}
 
 	function _currentDocumentChange (evt, currentDocument, previousDocument) {
-		var typeInformationRetrievedHandler = function (docs) {
+		var typeInformationRetrievedHandler = function (startPos, endPos, docs) {
 			if (docs.length === 0) {
 				return;
 			} else {
 				var typeInformation = docs[0];
 				var startBookmark = hostEditor._codeMirror.setBookmark(startPos);
 				var endBookmark = hostEditor._codeMirror.setBookmark(endPos);
-				var generatedDocumentation = DocumentationGenerator.generateDocumentationForArgumentTypes(typeInformation.argumentTypes);
 
-				var documentationInlineEditor = new DocumentationInlineEditor(startBookmark, endBookmark);
+				var documentationInlineEditor = new DocumentationInlineEditor(typeInformation.functionIdentifier, startBookmark, endBookmark);
 				documentationInlineEditor.load(hostEditor);
-				documentationInlineEditor.setContent(generatedDocumentation);
+				documentationInlineEditor.setContent(typeInformation);
 
 				hostEditor.addInlineWidget({ line: startPos.line - 1, ch: 0 }, documentationInlineEditor, true);		
 			}
@@ -74,8 +76,7 @@ define(function (require, exports, module) {
 										(endPos.line + 1) + "-" +
 										endPos.ch;
 
-			TypeInformationStore.typeInformationForFunctionIdentifer(functionIdentifier).done(typeInformationRetrievedHandler); 
-			
+			var documentationInlineEditor = new DocumentationInlineEditor(functionIdentifier, hostEditor, startPos, endPos);			
 		}
 	}
 

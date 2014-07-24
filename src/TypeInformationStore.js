@@ -11,7 +11,7 @@
  *
  * Notifications
  *
- * didUpdateTypeInformation - triggered when new type information is put into the store.
+ * didUpdateTypeInformation(newTypeInformation) - triggered when new type information is put into the store.
  * 
  */
 
@@ -100,21 +100,48 @@ define(function (require, exports, module) {
 	 * @param  {[Theseus Traces]} results
 	 */
 	function _theseusDidReceiveTypeInformation (event, results) {
+		var i, j;
+
 		if (!Array.isArray(results)) {
 			results = [results];
 		}
 
-		for (var i = results.length - 1; i >= 0; i--) {
-			var result = results[i];
+		results = _.groupBy(results, "nodeId");
 
-			var functionIdentifier = result.nodeId;
-			var argumentNames = _.pluck(result.arguments, "name");
-			var argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
-			for (var j = 0; j < argumentTypes.length; j++) {
-				argumentTypes[j].name = argumentNames[j];
+		for (var functionIdentifier in results) {
+			if (results.hasOwnProperty(functionIdentifier)) {
+				var resultsForNodeId = results[functionIdentifier];
+
+				//merge these results first 
+				resultsForNodeId = _.sortBy(resultsForNodeId, "invocationId");
+				var argumentTypeArrays = [];
+				for (i = 0; i < resultsForNodeId.length; i++) {
+					var result = resultsForNodeId[i];
+
+					var argumentNames = _.pluck(result.arguments, "name");
+					var argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
+					for (j = 0; j < argumentTypes.length; j++) {
+						argumentTypes[j].name = argumentNames[j];
+					}
+
+					argumentTypeArrays.push(argumentTypes);
+				}
+
+				var aggregateTypes = argumentTypeArrays[0];
+				for (i = 1; i < argumentTypeArrays.length; i++) {
+					var currentTypes = argumentTypeArrays[i]; 
+
+					if (currentTypes.length !== aggregateTypes.length) {
+						aggregateTypes = currentTypes; 
+					} else {
+						for (j = 0; j < currentTypes.length; j++) {
+							aggregateTypes[j] = _mergeTypeSpecs(currentTypes[j], aggregateTypes[j]); 
+						}
+					}
+				}
+				
+				_updateTypeForFunctionWithTypesAndArguments(functionIdentifier, aggregateTypes, resultsForNodeId[resultsForNodeId.length - 1].arguments);	
 			}
-
-			_updateTypeForFunctionWithTypesAndArguments(functionIdentifier, argumentTypes, result.arguments);
 		}
 	}
 
@@ -139,11 +166,25 @@ define(function (require, exports, module) {
 			{ functionIdentifier: functionIdentifier }
 		).done(function (docs) {
 			var newTypes = types;
+			var typesDidChange = false;
+			var doc;
+			
 			if (docs.length > 0) {
-				if (docs.argumentTypes !== undefined) { 
-					newTypes = _mergeTypeSpecs(types, docs.argumentTypes); 
+				doc = docs[0];
+				if ((doc.argumentTypes !== undefined) && (doc.argumentTypes.length === types.length)) {
+					for (var i = 0; i < types.length; i++) {
+						newTypes[i] = _mergeTypeSpecs(types[i], doc.argumentTypes[i]); 
+						typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], doc.argumentTypes[i]));
+					}
 				}
+			} else {
+				//types always changed if the entry was not present before
+				typesDidChange = true;
+				doc = { functionIdentifier: functionIdentifier };
 			}
+
+			doc.argumentTypes = newTypes; 
+			doc.lastArguments = argumentValues;
 
 			_executeDatabaseCommand("update",  
 					{ functionIdentifier: functionIdentifier }, 
@@ -152,8 +193,14 @@ define(function (require, exports, module) {
 						lastArguments: argumentValues 
 					}},
 					{ upsert: true }
-				).done(function  (newDocs) {
-					$(exports).trigger("didUpdateTypeInformation", [newDocs]); 
+				).done(function  (updateInfo) {
+					if (typesDidChange) {
+						if (updateInfo.newDoc !== undefined) {
+							$(exports).trigger("didUpdateTypeInformation", [updateInfo.newDoc]); 	
+						} else {
+							$(exports).trigger("didUpdateTypeInformation", [doc]); 
+						}
+					}
 				}).fail(errorHandler);
 
 		}).fail(errorHandler); 
@@ -167,8 +214,14 @@ define(function (require, exports, module) {
 	 */	
 	function _mergeTypeSpecs (typeA, typeB) {
 		var i, tmpType;
-
 		var resultType = {};
+
+		//use first name we can get 
+		if (typeA.hasOwnProperty("name")) {
+			resultType.name = typeA.name;
+		} else if (typeB.hasOwnProperty("name")) {
+			resultType.name = typeB.name;
+		}
 
 		//merge count
 		if (typeA.hasOwnProperty("count") && typeB.hasOwnProperty("count")) {
