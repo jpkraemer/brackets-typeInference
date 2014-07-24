@@ -4,29 +4,22 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 						= brackets.getModule("thirdparty/lodash");
-	var TypeInformationStore 	= require("./TypeInformationStore");
+	var _ 				= brackets.getModule("thirdparty/lodash");
 
 	/**
 	 * Generates @param JSDoc entries from the given argument types 
-	 * @param  {[Typespec]} argumentTypes
+	 * @param  {Typespec} argumentTypes
 	 * @return {String}
 	 */
-	function _generateDocumentationForArgumentTypes(argumentTypes) {
+	function typeSpecToJSDocParam(type) {
 		var paramTemplate = require("text!./templates/param-jsdoc.txt"); 
-		var paramDocs = []; 
+		var templateValues = {
+			name: type.name,
+			type: _jsDocTypeStringForTypespec(type),
+			description: type.description
+		};
 
-		for (var i = 0; i < argumentTypes.length; i++) {
-			var type = argumentTypes[i];
-			var templateValues = {
-				name: type.name,
-				type: _stringRepresentationForTypespec(type)
-			};
-
-			paramDocs.push(Mustache.render(paramTemplate, templateValues)); 
-		}
-
-		return paramDocs.join("\n");
+		return Mustache.render(paramTemplate, templateValues); 
 	}
 
 	/**
@@ -34,17 +27,17 @@ define(function (require, exports, module) {
 	 * @param  {Typespec} type
 	 * @return {String}
 	 */
-	function _stringRepresentationForTypespec (type) {
+	function _jsDocTypeStringForTypespec (type) {
 		var result; 
 
 		switch (type.type) {
 			case "array": 
-				result = "[" + _.map(type.spec, _stringRepresentationForTypespec).join(', ') + "]";
+				result = "Array.<" + _.map(type.spec, _jsDocTypeStringForTypespec).join(', ') + ">";
 				break;
 			case "object":
 				result = "{ "; 
 				result +=  _(type.spec)
-								.mapValues(_stringRepresentationForTypespec)
+								.mapValues(_jsDocTypeStringForTypespec)
 								.pairs()
 								.map(function (pair) { pair.join(": "); })
 								.value()
@@ -52,7 +45,7 @@ define(function (require, exports, module) {
 				result += " }";
 				break; 
 			case "multiple":
-				result = _.pluck(type.spec, "type").join(" or ");
+				result = "(" + _.pluck(type.spec, "type").join("|") + ")";
 				break; 
 			default: 
 				result = type.type;
@@ -65,5 +58,6 @@ define(function (require, exports, module) {
 		return result;
 	}
 
-	exports.generateDocumentationForArgumentTypes = _generateDocumentationForArgumentTypes;
+	exports.typeSpecToJSDocParam = typeSpecToJSDocParam;
+
 });
