@@ -18,7 +18,7 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 					= brackets.getModule("thirdparty/lodash");
+	var _ 					= require("./lib/lodash");
 	var Async				= brackets.getModule("utils/Async");
 	var ExtensionUtils 		= brackets.getModule("utils/ExtensionUtils");
 	var NodeDomain			= brackets.getModule("utils/NodeDomain");

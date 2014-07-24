@@ -4,7 +4,7 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 				= brackets.getModule("thirdparty/lodash");
+	var _ 				= require("./lib/lodash");
 	var marked 			= require("./node/node_modules/marked/lib/marked");
 
 	/**
@@ -52,10 +52,10 @@ define(function (require, exports, module) {
 				break;
 			case "object": 
 				result = "{ "; 
-				result +=  _(type.spec)
+				result +=  _.chain(type.spec)
 								.mapValues(_typeSpecToHTML)
 								.pairs()
-								.map(function (pair) { pair.join(": "); })
+								.map(function (pair) { return pair.join(": "); })
 								.value()
 								.join(", ");
 				result += " }";

@@ -4,7 +4,7 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 				= brackets.getModule("thirdparty/lodash");
+	var _ 				= require("./lib/lodash");
 
 	/**
 	 * Generates @param JSDoc entries from the given argument types 
