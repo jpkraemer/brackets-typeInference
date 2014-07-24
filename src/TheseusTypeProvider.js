@@ -40,22 +40,25 @@ define(function (require, exports, module) {
 		var functionsInFile = Agent.functionsInFile(path);
 
 		_tracedFunctions = _.uniq(_tracedFunctions.concat(functionsInFile), "id");
+		_.remove(_tracedFunctions, { path: "[built-in]" }); 
 
-		Agent.trackLogs({
-			ids: _.pluck(_tracedFunctions, "id"),
-			eventNames: [],
-			exceptions: false,
-			logs: false
-		}, function (handle) {
-			_logHandle = handle; 
-		});
+		if (_tracedFunctions.length !== 0) {
+			Agent.trackLogs({
+				ids: _.pluck(_tracedFunctions, "id"),
+				eventNames: [],
+				exceptions: false,
+				logs: false
+			}, function (handle) {
+				_logHandle = handle; 
+			});
+		}
 	}
 	
 	function _updateLoop () {
     	if (Agent.isReady()) {
 	    	Agent.refreshLogs(_logHandle, 20, function (results) {
 	    		if (results && results.length > 0) {
-	    			$(exports).trigger("didReceiveTypeInformation", results); 
+	    			$(exports).trigger("didReceiveTypeInformation", [ results ]); 
 	    		}
 	    	});	
     	}
