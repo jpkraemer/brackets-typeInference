@@ -1,1 +1,1 @@
-{{=<% %>=}}@param {<% type %>} <% name %> <% description %>
+{{=<% %>=}}@param {<% & type %>} <% & name %> <% & description %>

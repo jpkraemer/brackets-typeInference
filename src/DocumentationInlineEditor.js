@@ -212,6 +212,15 @@ define(function (require, exports, module) {
         }
     };
 
+    DocumentationInlineEditor.prototype._closeEditor = function() {
+        var jsdocString = this.inlineEditor.getValue();
+        this.typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(this.typeInformation, jsdocString);
+
+        this.docPartSpecifier = null; 
+        this.inlineEditor = null;
+        this._render(); 
+    };
+
     /**
      * This function shows an editor for the specified part of the documentat. Other open editors are closed. 
      * @param  {{partType: string, id: number}} docPartSpecifier partType can be "parameters", "description"
@@ -223,8 +232,7 @@ define(function (require, exports, module) {
         }
 
         if (this.inlineEditor !== null) {
-            this._render();
-            this.inlineEditor = null;
+            this._closeEditor();
         }
 
         this.docPartSpecifier = docPartSpecifier;
