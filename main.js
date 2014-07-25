@@ -17,7 +17,7 @@ define(function (require, exports, module) {
 	function _init () {
 		TIUtils.log("loading... "); 
 
-		ExtensionUtils.loadStyleSheet(module, "main.css");
+		ExtensionUtils.loadStyleSheet(module, "main.less");
 
 		TypeInformationStore.init();
 		TheseusTypeProvider.init();
