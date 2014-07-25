@@ -201,6 +201,13 @@ define(function (require, exports, module) {
                $line.on("click", this._clickHandler.bind(this));
                this.$contentDiv.append($line); 
            }
+
+           var $allTypeDivs = $(".ti-property-type");
+           var maxWidth = _.max($allTypeDivs.map(function() {
+               return $(this).width(); 
+           }).get());
+           //maxwidth should automatically include max-width set in css
+           $allTypeDivs.width(maxWidth);
        }
    };
 

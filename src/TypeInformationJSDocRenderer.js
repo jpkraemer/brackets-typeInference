@@ -31,6 +31,7 @@ define(function (require, exports, module) {
 						result.type = jsdocType.name; 
 						var splitAtDot = result.type.split("."); 
 						if (splitAtDot.length === 2) {
+							result.type = splitAtDot[0];
 							result.count = Number(splitAtDot[1]);
 						}
 						break; 
@@ -58,8 +59,8 @@ define(function (require, exports, module) {
 			}
 
 			var typeSpec = _jsdocTypeToTypeSpec(jsdoc.type); 
-			typeSpec.name = jsdoc.name; 
-			typeSpec.description = jsdoc.description; 
+			typeSpec.name = jsdoc.name === null ? undefined : jsdoc.name; 
+			typeSpec.description = jsdoc.description === null ? undefined : jsdoc.description; 
 
 			//search for the parameter in the existing typeSpec
 			var indexOfOldType = _.findIndex(typeInformation.argumentTypes, { name: typeSpec.name });
@@ -83,7 +84,7 @@ define(function (require, exports, module) {
 		var jsdoc = doctrine.parse(jsdocString);
 
 		if (jsdoc.description !== "") {
-			typeInformation.description = jsdoc.description; 
+			typeInformation.description = jsdoc.description === null ? undefined : jsdoc.description; 
 		}
 
 		for (var i = 0; i < jsdoc.tags.length; i++) {
