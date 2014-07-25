@@ -7,40 +7,18 @@ define(function (require, exports, module) {
 	var _ 				= require("./lib/lodash");
 	var marked 			= require("./node/node_modules/marked/lib/marked");
 
-	/**
-	 * This function converts type information into its HTML rendering
-	 * @param  {Typeinformation} typeInformation The type information for a method obtained from the TypeInformationStore
-	 * @return {jQueryObject}
-	 */
-	function typeInformationToHTML(typeInformation) {
-		var $result = $("<div />");
-		if (typeInformation.argumentTypes && (typeInformation.argumentTypes.length > 0)) {
-			$result.append($("<h2 />").append("Parameters").addClass("ti-headline"));
-			$result.append(argumentTypesToHTML(typeInformation.argumentTypes));
-		}
-		
-		return $result;
-	}
-
-	function argumentTypesToHTML (argumentTypes) {
+	function argumentTypeToHTML (type) {
 		var singleArgumentTemplate = require("text!./templates/singleArgument.html");
-		var $result = $("<table />");
+		var templateValues = {
+			name: type.name,
+			type: _typeSpecToHTML(type)
+		};
 
-		for (var i = 0; i < argumentTypes.length; i++) {
-			var type = argumentTypes[i];
-			var templateValues = {
-				name: type.name,
-				type: _typeSpecToHTML(type)
-			};
-
-			if (type.description !== undefined) {
-				templateValues.description = marked(type.description);
-			}
-
-			$result.append(Mustache.render(singleArgumentTemplate, templateValues)); 
+		if (type.description !== undefined) {
+			templateValues.description = marked(type.description);
 		}
 
-		return $result;
+		return Mustache.render(singleArgumentTemplate, templateValues); 
 	}
 
 	function _typeSpecToHTML (type) {
@@ -86,6 +64,6 @@ define(function (require, exports, module) {
 		return result;
 	}
 
-	exports.typeInformationToHTML = typeInformationToHTML;
+	exports.argumentTypeToHTML = argumentTypeToHTML;
 
 });

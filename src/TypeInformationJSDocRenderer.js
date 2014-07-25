@@ -36,10 +36,10 @@ define(function (require, exports, module) {
 				break;
 			case "object":
 				result = "{ "; 
-				result +=  _(type.spec)
+				result +=  _.chain(type.spec)
 								.mapValues(_jsDocTypeStringForTypespec)
 								.pairs()
-								.map(function (pair) { pair.join(": "); })
+								.map(function (pair) { return pair.join(": "); })
 								.value()
 								.join(", ");
 				result += " }";

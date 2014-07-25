@@ -4,10 +4,15 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
+    var _                              = require("./lib/lodash");
+    var CodeMirror                     = brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 	var InlineWidget 			       = brackets.getModule("editor/InlineWidget").InlineWidget;
     var TypeInformationHTMLRenderer    = require("./TypeInformationHTMLRenderer");
+    var TypeInformationJSDocRenderer   = require("./TypeInformationJSDocRenderer");
     var TypeInformationStore           = require("./TypeInformationStore");
     var TIUtils                        = require("./TIUtils");
+
+    var DOC_PART_ORDER                 = ["description", "parameters"];
 
 	/**
 	 * @constructor
@@ -27,10 +32,8 @@ define(function (require, exports, module) {
             if (docs.length === 0) {
                 return;
             } else {
-                var typeInformation = docs[0];
-        
                 this.load(hostEditor);
-                this.updateTypeInformation(typeInformation);
+                this.updateTypeInformation(docs[0]);
 
                 hostEditor.addInlineWidget({ line: startPos.line - 1, ch: 0 }, this, true);        
 
@@ -67,6 +70,25 @@ define(function (require, exports, module) {
      * @type {String}
      */
     DocumentationInlineEditor.prototype.functionIdentifier = null;
+
+    /**
+     * The currently displayed type information
+     * @type {TypeInformation}
+     */
+    DocumentationInlineEditor.prototype.typeInformation = null;
+
+    /**
+     * The current editor displayed to show part of the documentation. This iVar must not be called editor, because the QuickView
+     * extension accesses editors from all inline widgets and crashes.
+     * @type {CodeMirror}
+     */
+    DocumentationInlineEditor.prototype.inlineEditor = null;
+
+    /**
+     * The docPartSpecifier currently displayed in the editor
+     * @type {{partType: string, id: number}}
+     */
+    DocumentationInlineEditor.prototype.docPartSpecifier = null;
 
 	/**
      * Returns the current text range of the color we're attached to, or null if
@@ -136,12 +158,21 @@ define(function (require, exports, module) {
         this.hostEditor.setInlineWidgetHeight(this, 100, true);
     };
 
+    /**
+     * Callback for new type information from the TypeStore 
+     * @param  {jQueryEvent} evt
+     * @param  {TypeInformation} newDoc
+     */
     DocumentationInlineEditor.prototype._didUpdateTypeInformation = function(evt, newDoc) {
         if (newDoc.functionIdentifier === this.functionIdentifier) {
             this.updateTypeInformation(newDoc);
         }
     };
 
+    /**
+     * Update display with new type information that came in externally
+     * @param  {TypeInformation} typeInformation
+     */
     DocumentationInlineEditor.prototype.updateTypeInformation = function (typeInformation) {
         if (this.functionIdentifier !== typeInformation.functionIdentifier) {
             TIUtils.log("Inline widget for functionIdentifier "  + 
@@ -151,7 +182,165 @@ define(function (require, exports, module) {
                 ". Aborting update!");
         }
 
-        this.$contentDiv.html(TypeInformationHTMLRenderer.typeInformationToHTML(typeInformation));
+        this.typeInformation = typeInformation;
+        this._render();  
+    };
+
+    /**
+     * This method rerenders the content of the widget
+     */
+     DocumentationInlineEditor.prototype._render = function() {
+        this.$contentDiv.empty();
+
+        if (this.typeInformation.argumentTypes && (this.typeInformation.argumentTypes.length > 0)) {
+           this.$contentDiv.append($("<h2 />").append("Parameters").addClass("ti-headline"));
+
+           for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
+               var $line = $(TypeInformationHTMLRenderer.argumentTypeToHTML(this.typeInformation.argumentTypes[i]));
+               $line.data("argumentId", i);
+               $line.on("click", this._clickHandler.bind(this));
+               this.$contentDiv.append($line); 
+           }
+       }
+   };
+
+    DocumentationInlineEditor.prototype._clickHandler = function(event) {
+        var $target = $(event.currentTarget);
+
+        if ($target.hasClass('ti-property')) {
+            this._displayEditorForPartOfTypeInfo({ partType: "parameters", id: $target.data("argumentId") });     
+        }
+    };
+
+    /**
+     * This function shows an editor for the specified part of the documentat. Other open editors are closed. 
+     * @param  {{partType: string, id: number}} docPartSpecifier partType can be "parameters", "description"
+     */
+    DocumentationInlineEditor.prototype._displayEditorForPartOfTypeInfo = function(docPartSpecifier) {
+        if (_.isEqual(this.docPartSpecifier, docPartSpecifier)) {
+            //nothing to change
+            return;
+        }
+
+        if (this.inlineEditor !== null) {
+            this._render();
+            this.inlineEditor = null;
+        }
+
+        this.docPartSpecifier = docPartSpecifier;
+
+        var codeMirrorOptions = {
+            mode: "markdown",
+            theme: "default",
+            lineNumbers: false,
+            height: "dynamic", 
+            minHeight: 20
+        };
+
+        var $target;
+        var jsDoc;
+
+        switch (docPartSpecifier.partType) {
+            case "parameters": 
+                var type = this.typeInformation.argumentTypes[docPartSpecifier.id]; 
+                jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDocParam(type);
+
+                $target = this.$contentDiv.find(".ti-property").filter(function (index) {
+                    //this inside this filter function refers to the DOM element!
+                    return $(this).data("argumentId") === docPartSpecifier.id;
+                }); 
+                break;
+            default: 
+                TIUtils.log("Unknown docPartSpecifier: " + docPartSpecifier.partType); 
+                return;
+        }
+
+        codeMirrorOptions.value = jsDoc;
+
+        this.inlineEditor = new CodeMirror(function (element) {
+            $target.html(element);
+        }, codeMirrorOptions);
+
+        this.inlineEditor.on("keydown", this._onEditorKeyEvent.bind(this));
+
+        this.inlineEditor.focus();
+        this.inlineEditor.setCursor(0, jsDoc.length - 1);
+    };
+
+    /**
+     * Key handler for the inline editors. Captures the Arrow Up/Down events to move between editors.
+     * @param  {CodeMirror} theEditor
+     * @param  {Event} event
+     */
+    DocumentationInlineEditor.prototype._onEditorKeyEvent = function (theEditor, event) {
+        //sanity checks
+        if ((event.type !== "keydown") || (theEditor !== this.inlineEditor)) {
+            TIUtils.log("_onEditorKeyEvent callback called with invalid event or unknown editor");
+            return;
+        }
+
+        var cursorPos = this.inlineEditor.getCursor();
+
+        switch (event.keyCode) {
+            case 38: //Arrow Up Key
+                //Arrow Key Up
+                if (cursorPos.line === 0) {
+                    this._displayEditorForPartOfTypeInfo(this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier, true));
+                }
+                break;
+            case 40:
+                if (cursorPos.line === this.inlineEditor.lineCount() - 1) {
+                    this._displayEditorForPartOfTypeInfo(this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier));
+                }
+                break;
+        }
+    };
+
+    /**
+     * This function returns the docPartSpecifier before or after the given one. If there is no next or previous docPartSpecifier, it
+     * will return the unmodified input.
+     * @param  {DocPartSpecifier}   docPartSpecifier
+     * @param  {boolean}            backwards           If set to true, return the predecessor instead of the successor. Default is false
+     * @return {DocPartSpecifier}
+     */
+    DocumentationInlineEditor.prototype._nextDocPartSpecifierForDocPartSpecifier = function(docPartSpecifier, backwards) {
+        if (backwards === undefined) {
+            backwards = false;
+        }
+        var result = _.clone(docPartSpecifier);
+
+        var increment = backwards ? -1 : 1; 
+        var partTypeIndex = DOC_PART_ORDER.indexOf(result.partType); 
+
+        if (((result.id > 0) && backwards) || ((result.id < this._maxIdForDocPartType(result.partType)) && !backwards)) {
+            result.id += increment; 
+        } else {
+            if (((partTypeIndex > 0) && backwards) || ((partTypeIndex < DOC_PART_ORDER.length) && !backwards)) {
+                result.partType = DOC_PART_ORDER[partTypeIndex + increment];
+                result.id = backwards ? this._maxIdForDocPartType(result.partType) : 0;
+            }
+        }
+
+        return result;
+    };
+
+    /**
+     * Returns the maximum value for the id part of a DocPartSpecifier, given a particular partType
+     * @param  {String} partType
+     * @return {Number}
+     */
+    DocumentationInlineEditor.prototype._maxIdForDocPartType = function(partType) {
+        var result;
+
+        switch (partType) {
+            case "parameters": 
+                result = this.typeInformation.argumentTypes.length - 1; 
+                break;
+            default: 
+                result = 0;
+        }
+
+        return result;
     };
 
     module.exports = DocumentationInlineEditor;
