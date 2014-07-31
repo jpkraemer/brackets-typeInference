@@ -120,6 +120,7 @@ define(function (require, exports, module) {
 
 					var argumentNames = _.pluck(result.arguments, "name");
 					var argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
+					_.remove(argumentTypes, function (obj) { return obj === undefined; });
 					for (j = 0; j < argumentTypes.length; j++) {
 						argumentTypes[j].name = argumentNames[j];
 					}
