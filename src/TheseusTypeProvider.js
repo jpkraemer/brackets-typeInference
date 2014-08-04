@@ -16,7 +16,7 @@ define(function (require, exports, module) {
 	var _tracedFunctions = [];
 	var _logHandle;
 
-	function _init () {
+	function init () {
 		Agent.init(); 
 		AgentManager.init();
 
@@ -87,6 +87,6 @@ define(function (require, exports, module) {
     	}
     }
 
-    exports.init = _init; 
+    exports.init = init; 
 
 });
