@@ -58,7 +58,30 @@ define(function (require, exports, module) {
     	if (Agent.isReady()) {
 	    	Agent.refreshLogs(_logHandle, 20, function (results) {
 	    		if (results && results.length > 0) {
-	    			$(exports).trigger("didReceiveTypeInformation", [ results ]); 
+	    			var resultsToPassOn = [];
+
+	    			if (!Array.isArray(results)) {
+	    				results = [results];
+	    			}
+
+	    			results = _.sortBy(results, "invocationId");
+
+	    			for (var i = 0; i < results.length; i++) {
+	    				var result = results[i]; 
+	    				var resultToPassOn = { functionIdentifier: result.nodeId };
+
+						var argumentNames = _.pluck(result.arguments, "name");
+						resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
+						for (var j = 0; j < resultToPassOn.argumentTypes.length; j++) {
+							resultToPassOn.argumentTypes[j].name = argumentNames[j];
+						}
+
+						resultToPassOn.lastArguments = result.arguments; 
+
+						resultsToPassOn.push(resultToPassOn); 
+	    			}
+	    			
+	    			$(exports).trigger("didReceiveTypeInformation", [ resultsToPassOn ]); 
 	    		}
 	    	});	
     	}
