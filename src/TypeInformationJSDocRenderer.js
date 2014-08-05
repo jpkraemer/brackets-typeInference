@@ -76,6 +76,11 @@ define(function (require, exports, module) {
 			}
 
 			return typeInformation;
+		},
+
+		uniqueFunctionIdentifier: function (typeInformation, jsDoc) {
+			typeInformation.functionIdentifier = jsDoc.description; 
+			return typeInformation;
 		}
 	}; 
 
@@ -157,7 +162,12 @@ define(function (require, exports, module) {
 		return result;
 	}
 
+	function functionIdentifierToJSDoc (functionIdentifier) {
+		return "@uniqueFunctionIdentifier " + functionIdentifier;
+	}
+
 	exports.typeSpecToJSDocParam = typeSpecToJSDocParam;
+	exports.functionIdentifierToJSDoc = functionIdentifierToJSDoc;
 	exports.updateTypeInformationWithJSDoc = updateTypeInformationWithJSDoc;
 
 });
