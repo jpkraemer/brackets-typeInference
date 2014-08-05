@@ -21,6 +21,7 @@ define(function (require, exports, module) {
 	var _ 					= require("./lib/lodash");
 	var Async				= brackets.getModule("utils/Async");
 	var ExtensionUtils 		= brackets.getModule("utils/ExtensionUtils");
+	var JSDocTypeProvider 	= require("./JSDocTypeProvider");
 	var NodeDomain			= brackets.getModule("utils/NodeDomain");
 	var ProjectManager 		= brackets.getModule("project/ProjectManager");
 	var TheseusTypeProvider	= require('./TheseusTypeProvider');
@@ -43,6 +44,7 @@ define(function (require, exports, module) {
 
 		//register for updates from providers
 		$(TheseusTypeProvider).on("didReceiveTypeInformation", _didReceiveTypeInformation); 
+		$(JSDocTypeProvider).on("didReceiveTypeInformation", _didReceiveTypeInformation); 
 	}
 
 	function _executeDatabaseCommand () {
