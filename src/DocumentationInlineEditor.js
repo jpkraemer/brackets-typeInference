@@ -35,7 +35,7 @@ define(function (require, exports, module) {
                 this.load(hostEditor);
                 this.updateTypeInformation(docs[0]);
 
-                hostEditor.addInlineWidget({ line: startPos.line - 1, ch: 0 }, this, true);        
+                hostEditor.addInlineWidget({ line: startPos.line, ch: 0 }, this, true);        
 
                 $(TypeInformationStore).on("didUpdateTypeInformation", this._didUpdateTypeInformation.bind(this));
             }

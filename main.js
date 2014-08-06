@@ -51,35 +51,44 @@ define(function (require, exports, module) {
 			return; 
 		}
 
-		var functionsInFile = JSUtils.findAllMatchingFunctionsInText(currentDocument.getText(), "*");
+		TypeInformationStore.functionIdentifiersForFile(currentDocument.file.fullPath).done(function (functionIdentifiers) {
+			var fullText = currentDocument.getText(); 
+			var lines = fullText.split("\n");
+			var regex = /@uniqueFunctionIdentifier (\S+)/; 
 
-		for (var i = functionsInFile.length - 1; i >= 0; i--) {
-			var functionSpec = functionsInFile[i];
-			
-			var startPos 	= { line: functionSpec.lineStart },
-				endPos		= { line: functionSpec.lineEnd };
-			var startLine 	= currentDocument.getLine(startPos.line),
-				endLine		= currentDocument.getLine(endPos.line);
+			for (var i = 0; i < lines.length; i++) {
+				var line = lines[i];
+				var match = regex.exec(line);
+				if (match && (functionIdentifiers.indexOf(match[1]) !== -1)) {
+					var functionIdentifier = match[1];
 
-			var matches = startLine.match(/function/); 
-			if (matches) {
-				startPos.ch = matches.index;
+					var startPos = {}; 
+					var endPos = {}; 
+
+					startPos.line = 0; 
+					var j = i - 1; 
+					while ((j >= 0) && (startPos.line === 0)) {
+						if (/^\s*\/\*\*/.test(lines[j])) {
+							startPos.line = j;
+							startPos.ch = lines[j].match(/^\s*/)[0].length;
+						}
+						j--;
+					}
+
+					endPos.line = 0; 
+					j = j + 1; 
+					while ((j < lines.length) && (endPos.line === 0)) {
+						if (/^\s*\*\//.test(lines[j])) {
+							endPos.line = j;
+							endPos.ch = lines[j].match(/^\s*\*\//)[0].length;
+						} 
+						j++;
+					}	
+
+					var documentationInlineEditor = new DocumentationInlineEditor(functionIdentifier, hostEditor, startPos, endPos);
+				}
 			}
-
-			matches = undefined;
-			matches = endLine.match(/\}/);
-			if (matches) {
-				endPos.ch = matches.index + 1;
-			}
-
-			var functionIdentifier = currentDocument.file.fullPath + "-function-" + 
-										(startPos.line + 1) + "-" + 
-										startPos.ch + "-" +
-										(endPos.line + 1) + "-" +
-										endPos.ch;
-
-			var documentationInlineEditor = new DocumentationInlineEditor(functionIdentifier, hostEditor, startPos, endPos);			
-		}
+		});
 	}
 
 	AppInit.appReady(_init);

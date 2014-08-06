@@ -67,6 +67,11 @@ define(function (require, exports, module) {
 		return result.promise();
 	}
 
+	/**
+	 * Returns a promise that resolves with the type information record for the given function identifier
+	 * @param  {string} functionIdentifier
+	 * @return {TypeInformation (Promise)}
+	 */
 	function typeInformationForFunctionIdentifer (functionIdentifier) {
 		var result = $.Deferred();
 
@@ -76,6 +81,26 @@ define(function (require, exports, module) {
 			result.resolve(docs);
 		}).fail(function (err) {
 			TIUtils.log("Error retrieving type information for function identifier " + functionIdentifier + ": " + err);
+			result.reject(err);
+		});
+
+		return result.promise();
+	}
+
+	/**
+	 * Returns a promise that resolves to the list of function identifiers in the given file
+	 * @param {string} file 
+	 * @return {[string]} Array of function identifiers
+	 */
+	function functionIdentifiersForFile (file) {
+		var result = $.Deferred(); 
+
+		_executeDatabaseCommand("find",
+			{ file: file }
+		).done(function (docs) {
+			result.resolve(_.pluck(docs, "functionIdentifier"));
+		}).fail(function (err) {
+			TIUtils.log("Error retrieving function identifers in file " + file + ": " + err);
 			result.reject(err);
 		});
 
@@ -167,7 +192,7 @@ define(function (require, exports, module) {
 				doc = typeInformation;
 			}
 
-			if (typeInformation.hasOwnProperty("argumentTypes")) {
+			if (typeInformation.argumentTypes !== undefined) {
 				var newTypes = typeInformation.argumentTypes;
 			
 				//types always changed if the record is new
@@ -179,7 +204,10 @@ define(function (require, exports, module) {
 							newTypes[i] = _mergeTypeSpecs(typeInformation.argumentTypes[i], doc.argumentTypes[i]); 
 							typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], doc.argumentTypes[i]));
 						}
-					}	
+					} else {
+						//either length changed or type info was just added
+						typesDidChange = true;
+					}
 				} 
 
 				if (typesDidChange) {
@@ -188,9 +216,14 @@ define(function (require, exports, module) {
 				}
 			}
 
-			if (typeInformation.hasOwnProperty("lastArguments")) {
+			if (typeInformation.lastArguments !== undefined) {
 				doc.lastArguments = typeInformation.lastArguments;
 				propertiesToUpdate.lastArguments = typeInformation.lastArguments;
+			}
+
+			if (typeInformation.file !== undefined) {
+				doc.file = typeInformation.file; 
+				propertiesToUpdate.file = typeInformation.file;
 			}
 
 			if (_.size(propertiesToUpdate) > 0) {
@@ -487,5 +520,6 @@ define(function (require, exports, module) {
 	exports.forTests = {};
 	exports.forTests.mergeCounts = _mergeCounts;
 	exports.typeInformationForFunctionIdentifer = typeInformationForFunctionIdentifer;
+	exports.functionIdentifiersForFile = functionIdentifiersForFile;
 	exports.PRIMITIVE_TYPES = PRIMITIVE_TYPES;
 });

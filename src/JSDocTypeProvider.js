@@ -60,7 +60,7 @@
 				if (commentFound) {
 					document.replaceRange(newText, { line: commentInfo.endLoc.line, ch: 0 });
 				} else {
-					newText = "\n/**\n" + newText + " */";
+					newText = "/**\n" + newText + " */\n";
 					document.replaceRange(newText, functionInfo.startLoc);
 				}
 			}
@@ -81,7 +81,7 @@
 
 		_iterateFunctions(document, function (functionInfo, commentFound, commentInfo) {
 			if (commentFound) {
-				var typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc({}, commentInfo.textContent);
+				var typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc({ file: document.file.fullPath }, commentInfo.textContent);
 				results.push(typeInformation);
 			}
 		});
@@ -107,6 +107,8 @@
 	 		var line;
 	 		var i, j;
 
+	 		//make sure to iterate through the functions from the back of the file to the top, so insertions don't change line indexes
+	 		functions.reverse(); 
 	 		for (i = 0; i < functions.length; i++) {
 	 			var functionLocation = functions[i];
 
@@ -119,6 +121,9 @@
 
 	 			j = functionLocation.lineStart - 1; 
 	 			do {
+	 				if (j < 0) {
+	 					break;
+	 				}
 	 				line = document.getLine(j);
 	 				if (!commentFound) {
 	 					commentFound = /^\s*\*\//.test(line); 
