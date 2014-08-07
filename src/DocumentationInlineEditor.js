@@ -289,12 +289,14 @@ define(function (require, exports, module) {
     };
 
     DocumentationInlineEditor.prototype._closeEditor = function() {
-        var jsdocString = this.inlineEditor.getValue();
-        this.typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(this.typeInformation, jsdocString);
+        if (this.inlineEditor !== null) {
+            var jsdocString = this.inlineEditor.getValue();
+            this.typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(this.typeInformation, jsdocString);
 
-        this.docPartSpecifier = null; 
-        this.inlineEditor = null;
-        this._render(); 
+            this.docPartSpecifier = null; 
+            this.inlineEditor = null;
+            this._render(); 
+        }
     };
 
     /**
