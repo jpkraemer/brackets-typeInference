@@ -21,6 +21,15 @@ define(function (require, exports, module) {
 		return Mustache.render(singleArgumentTemplate, templateValues); 
 	}
 
+	/** 
+	 * Convenience function to render an arbitrary markdown string to HTML. Used by the Doc Widget to show the general description
+	 * @param {string} string The input string
+	 * @return {string} HTML Markup
+	 */ 	
+	function markdownStringToHTML (string) {
+		return marked(string); 
+	}
+
 	function _typeSpecToHTML (type) {
 		var result; 
 
@@ -65,5 +74,6 @@ define(function (require, exports, module) {
 	}
 
 	exports.argumentTypeToHTML = argumentTypeToHTML;
+	exports.markdownStringToHTML = markdownStringToHTML; 
 
 });

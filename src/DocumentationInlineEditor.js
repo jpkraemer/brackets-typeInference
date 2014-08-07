@@ -215,7 +215,7 @@ define(function (require, exports, module) {
     DocumentationInlineEditor.prototype.onAdded = function () {
         DocumentationInlineEditor.prototype.parentClass.onAdded.apply(this, arguments);
 
-        this.hostEditor.setInlineWidgetHeight(this, 100, true);
+        this.hostEditor.setInlineWidgetHeight(this, 150, true);
     };
 
     /**
@@ -252,6 +252,13 @@ define(function (require, exports, module) {
      DocumentationInlineEditor.prototype._render = function() {
         this.$contentDiv.empty();
 
+        var $descriptionContainer = $("<div />").addClass("ti-description"); 
+        if (this.typeInformation.description) { 
+            this.$contentDiv.append($("<h2 />").append("Description").addClass("ti-headline"));
+            $descriptionContainer.append(TypeInformationHTMLRenderer.markdownStringToHTML(this.typeInformation.description)); 
+        }
+        this.$contentDiv.append($descriptionContainer);
+
         if (this.typeInformation.argumentTypes && (this.typeInformation.argumentTypes.length > 0)) {
            this.$contentDiv.append($("<h2 />").append("Parameters").addClass("ti-headline"));
 
@@ -269,6 +276,8 @@ define(function (require, exports, module) {
            //maxwidth should automatically include max-width set in css
            $allTypeDivs.width(maxWidth);
        }
+
+       // this.hostEditor.setInlineWidgetHeight(this, this.$contentDiv.height(), true);
    };
 
     DocumentationInlineEditor.prototype._clickHandler = function(event) {
@@ -316,6 +325,10 @@ define(function (require, exports, module) {
         var jsDoc;
 
         switch (docPartSpecifier.partType) {
+            case "description": 
+                jsDoc = (this.typeInformation.description === undefined) ? "" : this.typeInformation.description; 
+                $target = this.$contentDiv.find(".ti-description");
+                break; 
             case "parameters": 
                 var type = this.typeInformation.argumentTypes[docPartSpecifier.id]; 
                 jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDocParam(type);
@@ -337,9 +350,12 @@ define(function (require, exports, module) {
         }, codeMirrorOptions);
 
         this.inlineEditor.on("keydown", this._onEditorKeyEvent.bind(this));
+        this.inlineEditor.on("blur", this._onEditorBlur.bind(this));
 
         this.inlineEditor.focus();
         this.inlineEditor.setCursor(0, jsDoc.length - 1);
+
+        // this.hostEditor.setInlineWidgetHeight(this, this.$contentDiv.height(), true);
     };
 
     /**
@@ -369,6 +385,10 @@ define(function (require, exports, module) {
                 }
                 break;
         }
+    };
+
+    DocumentationInlineEditor.prototype._onEditorBlur = function() {
+        this._closeEditor();
     };
 
     /**
