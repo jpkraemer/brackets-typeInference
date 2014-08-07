@@ -16,6 +16,10 @@ define(function (require, exports, module) {
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
 	var TIUtils 					= require("./src/TIUtils");
 
+	var inlineWidgetsByFunctionIdentifier = {};
+	var currentDocument; 
+	var hostEditor;
+
 	function _init () {
 		TIUtils.log("loading... "); 
 
@@ -28,10 +32,20 @@ define(function (require, exports, module) {
 
 		$(DocumentManger).on("currentDocumentChange", _currentDocumentChange);
 		_currentDocumentChange(null, DocumentManger.getCurrentDocument());
+
+		$(TypeInformationStore).on("didUpdateTypeInformation", _didUpdateTypeInformation); 
 	}
 
-	function _currentDocumentChange (evt, currentDocument, previousDocument) {
-		var hostEditor = EditorManager.getCurrentFullEditor();
+	/**
+	 * Currently we set inline editors up here. This might move, not sure yet what's the best place
+	 * @param  {jQuery Event} evt
+	 * @param  {Document} currentDocument
+	 * @param  {Document} previousDocument
+	 */
+	function _currentDocumentChange (evt, newCurrentDocument, previousDocument) {
+		currentDocument = newCurrentDocument;
+
+		hostEditor = EditorManager.getCurrentFullEditor();
 
 		if (currentDocument.getLanguage().getMode() !== "javascript") {
 			return; 
@@ -47,34 +61,61 @@ define(function (require, exports, module) {
 				var match = regex.exec(line);
 				if (match && (functionIdentifiers.indexOf(match[1]) !== -1)) {
 					var functionIdentifier = match[1];
+					var commentRange = _extractCommentPositionStartingAtLineWithLineArray(i, lines);
 
-					var startPos = {}; 
-					var endPos = {}; 
-
-					startPos.line = 0; 
-					var j = i - 1; 
-					while ((j >= 0) && (startPos.line === 0)) {
-						if (/^\s*\/\*\*/.test(lines[j])) {
-							startPos.line = j;
-							startPos.ch = lines[j].match(/^\s*/)[0].length;
-						}
-						j--;
-					}
-
-					endPos.line = 0; 
-					j = j + 1; 
-					while ((j < lines.length) && (endPos.line === 0)) {
-						if (/^\s*\*\//.test(lines[j])) {
-							endPos.line = j;
-							endPos.ch = lines[j].match(/^\s*\*\//)[0].length;
-						} 
-						j++;
-					}	
-
-					var documentationInlineEditor = new DocumentationInlineEditor(functionIdentifier, hostEditor, startPos, endPos);
+					inlineWidgetsByFunctionIdentifier[functionIdentifier] = new DocumentationInlineEditor(functionIdentifier, hostEditor, commentRange.startPos, commentRange.endPos);
 				}
 			}
 		});
+	}
+
+	function _didUpdateTypeInformation (evt, newDoc) {
+		if ((inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] === undefined) && 
+			(newDoc.file === currentDocument.file.fullPath)) {
+
+			var fullText = currentDocument.getText(); 
+			var lines = fullText.split("\n");
+
+			for (var i = 0; i < lines.length; i++) {
+				var line = lines[i]; 
+
+				var lineNumber = line.indexOf("@uniqueFunctionIdentifier " + newDoc.functionIdentifier);
+				if (lineNumber !== -1) {
+					var commentRange = _extractCommentPositionStartingAtLineWithLineArray(lineNumber, lines);
+					inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] = new DocumentationInlineEditor(newDoc.functionIdentifier, hostEditor, commentRange.startPos, commentRange.endPos);
+				}
+			}
+		}
+	}
+
+	function _extractCommentPositionStartingAtLineWithLineArray (lineNumber, lines) {
+		var startPos = {}; 
+		var endPos = {}; 
+
+		startPos.line = 0; 
+		var i = lineNumber - 1; 
+		while ((i >= 0) && (startPos.line === 0)) {
+			if (/^\s*\/\*\*/.test(lines[i])) {
+				startPos.line = i;
+				startPos.ch = lines[i].match(/^\s*/)[0].length;
+			}
+			i--;
+		}
+
+		endPos.line = 0; 
+		i = lineNumber + 1; 
+		while ((i < lines.length) && (endPos.line === 0)) {
+			if (/^\s*\*\//.test(lines[i])) {
+				endPos.line = i;
+				endPos.ch = lines[i].match(/^\s*\*\//)[0].length;
+			}
+			i++;
+		}	
+
+		return {
+			startPos: startPos,
+			endPos: endPos
+		};
 	}
 
 	AppInit.appReady(_init);
