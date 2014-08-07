@@ -9,6 +9,7 @@ define(function (require, exports, module) {
 	var DocumentManger				= brackets.getModule("document/DocumentManager");
 	var EditorManager				= brackets.getModule("editor/EditorManager");
 	var ExtensionUtils				= brackets.getModule("utils/ExtensionUtils");
+	var JSDocTypeProvider			= require("./src/JSDocTypeProvider");
 	var JSUtils						= brackets.getModule("language/JSUtils");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
@@ -21,6 +22,7 @@ define(function (require, exports, module) {
 
 		TypeInformationStore.init();
 		TheseusTypeProvider.init();
+		JSDocTypeProvider.init();
 
 		$(DocumentManger).on("currentDocumentChange", _currentDocumentChange);
 		_currentDocumentChange(null, DocumentManger.getCurrentDocument());

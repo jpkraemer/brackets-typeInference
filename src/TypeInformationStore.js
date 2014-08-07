@@ -21,6 +21,7 @@ define(function (require, exports, module) {
 	var _ 					= require("./lib/lodash");
 	var Async				= brackets.getModule("utils/Async");
 	var ExtensionUtils 		= brackets.getModule("utils/ExtensionUtils");
+	var JSDocTypeProvider 	= require("./JSDocTypeProvider");
 	var NodeDomain			= brackets.getModule("utils/NodeDomain");
 	var ProjectManager 		= brackets.getModule("project/ProjectManager");
 	var TheseusTypeProvider	= require('./TheseusTypeProvider');
@@ -42,7 +43,8 @@ define(function (require, exports, module) {
 		$(ProjectManager).on("projectOpen", _projectOpened); 
 
 		//register for updates from providers
-		$(TheseusTypeProvider).on("didReceiveTypeInformation", _theseusDidReceiveTypeInformation); 
+		$(TheseusTypeProvider).on("didReceiveTypeInformation", _didReceiveTypeInformation); 
+		$(JSDocTypeProvider).on("didReceiveTypeInformation", _didReceiveTypeInformation); 
 	}
 
 	function _executeDatabaseCommand () {
@@ -95,55 +97,43 @@ define(function (require, exports, module) {
 	}
 
 	/**
-	 * Callback fired by Theseus Type provider. Calculates arugment types and stores them to database. 
+	 * Callback fired by Type providers. 
 	 * @param  {Event} event
-	 * @param  {[Theseus Traces]} results
+	 * @param  {[Type Information records]} results
 	 */
-	function _theseusDidReceiveTypeInformation (event, results) {
+	function _didReceiveTypeInformation (event, results) {
 		var i, j;
 
 		if (!Array.isArray(results)) {
-			results = [results];
+			throw "[type-inference] Never call type information store updates with something that is not an array.";
 		}
 
-		results = _.groupBy(results, "nodeId");
+		results = _.groupBy(results, "functionIdentifier");
 
-		for (var functionIdentifier in results) {
-			if (results.hasOwnProperty(functionIdentifier)) {
-				var resultsForNodeId = results[functionIdentifier];
+		_.forOwn(results, function (num, functionIdentifier) {
+			var resultsForFunctionIdentifier = results[functionIdentifier];
+			//if there is more then one result per function identifier, we premerge these. Only happens for live data providers, of course.
+			var argumentTypeArrays = _.pluck(resultsForFunctionIdentifier, "argumentTypes");
 
-				//merge these results first 
-				resultsForNodeId = _.sortBy(resultsForNodeId, "invocationId");
-				var argumentTypeArrays = [];
-				for (i = 0; i < resultsForNodeId.length; i++) {
-					var result = resultsForNodeId[i];
+			var aggregateTypes = argumentTypeArrays[0];
+			for (i = 1; i < argumentTypeArrays.length; i++) {
+				var currentTypes = argumentTypeArrays[i]; 
 
-					var argumentNames = _.pluck(result.arguments, "name");
-					var argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
-					_.remove(argumentTypes, function (obj) { return obj === undefined; });
-					for (j = 0; j < argumentTypes.length; j++) {
-						argumentTypes[j].name = argumentNames[j];
-					}
-
-					argumentTypeArrays.push(argumentTypes);
-				}
-
-				var aggregateTypes = argumentTypeArrays[0];
-				for (i = 1; i < argumentTypeArrays.length; i++) {
-					var currentTypes = argumentTypeArrays[i]; 
-
-					if (currentTypes.length !== aggregateTypes.length) {
-						aggregateTypes = currentTypes; 
-					} else {
-						for (j = 0; j < currentTypes.length; j++) {
-							aggregateTypes[j] = _mergeTypeSpecs(currentTypes[j], aggregateTypes[j]); 
-						}
+				if (currentTypes.length !== aggregateTypes.length) {
+					aggregateTypes = currentTypes; 
+				} else {
+					for (j = 0; j < currentTypes.length; j++) {
+						aggregateTypes[j] = _mergeTypeSpecs(currentTypes[j], aggregateTypes[j]); 
 					}
 				}
-				
-				_updateTypeForFunctionWithTypesAndArguments(functionIdentifier, aggregateTypes, resultsForNodeId[resultsForNodeId.length - 1].arguments);	
 			}
-		}
+
+			var mergedTypeInformation = _.last(resultsForFunctionIdentifier); 
+			mergedTypeInformation.argumentTypes = aggregateTypes;
+			
+			_updateWithTypeInformation(mergedTypeInformation);
+			// _updateTypeForFunctionWithTypesAndArguments(functionIdentifier, aggregateTypes, resultsForNodeId[resultsForNodeId.length - 1].arguments);	
+		});
 	}
 
 	/**
@@ -152,7 +142,7 @@ define(function (require, exports, module) {
 	 * @param  {[Typespec]} types
 	 * @param  {[type]} arguments
 	 */
-	function _updateTypeForFunctionWithTypesAndArguments (functionIdentifier, types, argumentValues) {
+	function _updateWithTypeInformation (typeInformation) {
 
 		var successHandler = function (newDocs) {
 			TIUtils.log("Successfully update type information: " + newDocs);
@@ -162,48 +152,62 @@ define(function (require, exports, module) {
 			TIUtils.log("Error updating type information: " + err);
 		};
 
-
 		_executeDatabaseCommand("find", 
-			{ functionIdentifier: functionIdentifier }
+			{ functionIdentifier: typeInformation.functionIdentifier }
 		).done(function (docs) {
-			var newTypes = types;
-			var typesDidChange = false;
+			var isUpdate = false;
 			var doc;
+			var propertiesToUpdate = {};
 			
 			if (docs.length > 0) {
+				isUpdate = true; 
 				doc = docs[0];
-				if ((doc.argumentTypes !== undefined) && (doc.argumentTypes.length === types.length)) {
-					for (var i = 0; i < types.length; i++) {
-						newTypes[i] = _mergeTypeSpecs(types[i], doc.argumentTypes[i]); 
-						typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], doc.argumentTypes[i]));
-					}
-				}
 			} else {
-				//types always changed if the entry was not present before
-				typesDidChange = true;
-				doc = { functionIdentifier: functionIdentifier };
+				isUpdate = false;
+				doc = typeInformation;
 			}
 
-			doc.argumentTypes = newTypes; 
-			doc.lastArguments = argumentValues;
+			if (typeInformation.hasOwnProperty("argumentTypes")) {
+				var newTypes = typeInformation.argumentTypes;
+			
+				//types always changed if the record is new
+				var typesDidChange = !isUpdate; 
 
-			_executeDatabaseCommand("update",  
-					{ functionIdentifier: functionIdentifier }, 
-					{ $set: { 
-						argumentTypes: newTypes,
-						lastArguments: argumentValues 
-					}},
-					{ upsert: true }
-				).done(function  (updateInfo) {
-					if (typesDidChange) {
-						if (updateInfo.newDoc !== undefined) {
-							$(exports).trigger("didUpdateTypeInformation", [updateInfo.newDoc]); 	
-						} else {
-							$(exports).trigger("didUpdateTypeInformation", [doc]); 
+				if (isUpdate) {
+					if ((doc.argumentTypes !== undefined) && (doc.argumentTypes.length === typeInformation.argumentTypes.length)) {
+						for (var i = 0; i < typeInformation.argumentTypes.length; i++) {
+							newTypes[i] = _mergeTypeSpecs(typeInformation.argumentTypes[i], doc.argumentTypes[i]); 
+							typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], doc.argumentTypes[i]));
 						}
-					}
-				}).fail(errorHandler);
+					}	
+				} 
 
+				if (typesDidChange) {
+					doc.argumentTypes = newTypes; 	
+					propertiesToUpdate.argumentTypes = newTypes;	
+				}
+			}
+
+			if (typeInformation.hasOwnProperty("lastArguments")) {
+				doc.lastArguments = typeInformation.lastArguments;
+				propertiesToUpdate.lastArguments = typeInformation.lastArguments;
+			}
+
+			if (_.size(propertiesToUpdate) > 0) {
+				_executeDatabaseCommand("update",  
+						{ functionIdentifier: typeInformation.functionIdentifier }, 
+						{ $set: propertiesToUpdate },
+						{ upsert: true }
+					).done(function  (updateInfo) {
+						if (typesDidChange) {
+							if (updateInfo.newDoc !== undefined) {
+								$(exports).trigger("didUpdateTypeInformation", [updateInfo.newDoc]); 	
+							} else {
+								$(exports).trigger("didUpdateTypeInformation", [doc]); 
+							}
+						}
+					}).fail(errorHandler);
+			}
 		}).fail(errorHandler); 
 	}
 

@@ -15,6 +15,7 @@ define(function (require, exports, module) {
 	var converters = {
 		/**
 		 * Converter for the param tag
+		 * @param  {TypeInformation} typeInformation This typespec is udpated and returned.
 		 * @param  {jsDocObject} jsdoc
 		 * @return {TypeInformation} incomplete
 		 */
@@ -63,6 +64,10 @@ define(function (require, exports, module) {
 			typeSpec.description = jsdoc.description === null ? undefined : jsdoc.description; 
 
 			//search for the parameter in the existing typeSpec
+			if (typeInformation.argumentTypes === undefined) {
+				typeInformation.argumentTypes = [];
+			}
+
 			var indexOfOldType = _.findIndex(typeInformation.argumentTypes, { name: typeSpec.name });
 			if (indexOfOldType > -1) {
 				typeInformation.argumentTypes[indexOfOldType] = typeSpec; 
@@ -70,6 +75,11 @@ define(function (require, exports, module) {
 				typeInformation.argumentTypes.push(typeSpec);
 			}
 
+			return typeInformation;
+		},
+
+		uniqueFunctionIdentifier: function (typeInformation, jsDoc) {
+			typeInformation.functionIdentifier = jsDoc.description; 
 			return typeInformation;
 		}
 	}; 
@@ -152,7 +162,12 @@ define(function (require, exports, module) {
 		return result;
 	}
 
+	function functionIdentifierToJSDoc (functionIdentifier) {
+		return "@uniqueFunctionIdentifier " + functionIdentifier;
+	}
+
 	exports.typeSpecToJSDocParam = typeSpecToJSDocParam;
+	exports.functionIdentifierToJSDoc = functionIdentifierToJSDoc;
 	exports.updateTypeInformationWithJSDoc = updateTypeInformationWithJSDoc;
 
 });
