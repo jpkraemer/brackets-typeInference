@@ -5,7 +5,10 @@ define(function (require, exports, module) {
 	"use strict"; 
 
     var _                              = require("./lib/lodash");
+    var AnimationUtils                 = brackets.getModule("utils/AnimationUtils");
+    var Async                          = brackets.getModule("utils/Async");
     var CodeMirror                     = brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
+    var Editor                         = brackets.getModule("editor/Editor").Editor;
 	var InlineWidget 			       = brackets.getModule("editor/InlineWidget").InlineWidget;
     var TypeInformationHTMLRenderer    = require("./TypeInformationHTMLRenderer");
     var TypeInformationJSDocRenderer   = require("./TypeInformationJSDocRenderer");
@@ -13,6 +16,62 @@ define(function (require, exports, module) {
     var TIUtils                        = require("./TIUtils");
 
     var DOC_PART_ORDER                 = ["description", "parameters"];
+
+    /**
+     * We add functionality to render inline widgets above the inserted line here. 
+     * Therefor, we copy the original addInlineWidget methods from the editor and change them to use the above: true option.
+     * It is a terrible hack and should be avoided in the future.
+     */
+    Editor.prototype.addInlineWidgetAbove = function (pos, inlineWidget, scrollLineIntoView) {
+        var self = this,
+            queue = this._inlineWidgetQueues[pos.line],
+            deferred = new $.Deferred();
+        if (!queue) {
+            queue = new Async.PromiseQueue();
+            this._inlineWidgetQueues[pos.line] = queue;
+        }
+        queue.add(function () {
+            self._addInlineWidgetAboveInternal(pos, inlineWidget, scrollLineIntoView, deferred);
+            return deferred.promise();
+        });
+        return deferred.promise();
+    };
+    
+    /**
+     * @private
+     * Does the actual work of addInlineWidget().
+     */
+    Editor.prototype._addInlineWidgetAboveInternal = function (pos, inlineWidget, scrollLineIntoView, deferred) {
+        var self = this;
+        
+        this.removeAllInlineWidgetsForLine(pos.line).done(function () {
+            if (scrollLineIntoView === undefined) {
+                scrollLineIntoView = true;
+            }
+    
+            if (scrollLineIntoView) {
+                self._codeMirror.scrollIntoView(pos);
+            }
+    
+            inlineWidget.info = self._codeMirror.addLineWidget(pos.line, inlineWidget.htmlContent,
+                                                               { coverGutter: true, noHScroll: true, above: true });
+            CodeMirror.on(inlineWidget.info.line, "delete", function () {
+                self._removeInlineWidgetInternal(inlineWidget);
+            });
+            self._inlineWidgets.push(inlineWidget);
+
+            // Set up the widget to start closed, then animate open when its initial height is set.
+            inlineWidget.$htmlContent.height(0);
+            AnimationUtils.animateUsingClass(inlineWidget.htmlContent, "animating")
+                .done(function () {
+                    deferred.resolve();
+                });
+
+            // Callback to widget once parented to the editor. The widget should call back to
+            // setInlineWidgetHeight() in order to set its initial height and animate open.
+            inlineWidget.onAdded();
+        });
+    };
 
 	/**
 	 * @constructor
@@ -35,7 +94,8 @@ define(function (require, exports, module) {
                 this.load(hostEditor);
                 this.updateTypeInformation(docs[0]);
 
-                hostEditor.addInlineWidget({ line: startPos.line, ch: 0 }, this, true);        
+                hostEditor.addInlineWidgetAbove({ line: endPos.line + 1, ch: 0 }, this, true);
+                hostEditor._hideLines(startPos.line, endPos.line + 1);
 
                 $(TypeInformationStore).on("didUpdateTypeInformation", this._didUpdateTypeInformation.bind(this));
             }
