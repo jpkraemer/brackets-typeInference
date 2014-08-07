@@ -261,8 +261,15 @@ define(function (require, exports, module) {
 			resultType.name = typeB.name;
 		}
 
+		//use the first description we can get
+		if (typeA.description !== undefined) { 
+			resultType.description = typeA.description;
+		} else if (typeB.description !== undefined) { 
+			resultType.description = typeB.description;
+		}
+
 		//merge count
-		if (typeA.hasOwnProperty("count") && typeB.hasOwnProperty("count")) {
+		if (typeA.hasOwnProperty("count") || typeB.hasOwnProperty("count")) {
 			//both appeared in an array. Really, if one of them did, the other should, too, otherwise something is really messed up
 			resultType.count = _mergeCounts(typeA.count, typeB.count);
 		}
@@ -379,6 +386,12 @@ define(function (require, exports, module) {
 	 * @return {number or {min: number, max: number}}
 	 */
 	function _mergeCounts (countA, countB) {
+		if (countA === undefined) {
+			return countB;
+		} else if (countB === undefined) {
+			return countA;
+		}
+
 		if (typeof countA === "number") {
 			countA = { min: countA, max: countA };
 		}
