@@ -4,6 +4,7 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
+	var _ 							= require("./src/lib/lodash");
 	var AppInit						= brackets.getModule("utils/AppInit");
 	var DocumentationInlineEditor 	= require("./src/DocumentationInlineEditor");
 	var DocumentManger				= brackets.getModule("document/DocumentManager");
@@ -52,20 +53,14 @@ define(function (require, exports, module) {
 		}
 
 		TypeInformationStore.functionIdentifiersForFile(currentDocument.file.fullPath).done(function (functionIdentifiers) {
-			var fullText = currentDocument.getText(); 
-			var lines = fullText.split("\n");
-			var regex = /@uniqueFunctionIdentifier (\S+)/; 
+			var functionLocations = FunctionTracker.functionLocationsInCurrentDocument(); 
+			_.forOwn(functionLocations, function (functionLocation, functionIdentifier) {
+				var index = functionIdentifiers.indexOf(functionIdentifier);
 
-			for (var i = 0; i < lines.length; i++) {
-				var line = lines[i];
-				var match = regex.exec(line);
-				if (match && (functionIdentifiers.indexOf(match[1]) !== -1)) {
-					var functionIdentifier = match[1];
-					var commentRange = _extractCommentPositionStartingAtLineWithLineArray(i, lines);
-
-					inlineWidgetsByFunctionIdentifier[functionIdentifier] = new DocumentationInlineEditor(functionIdentifier, hostEditor, commentRange.startPos, commentRange.endPos);
+				if (index !== -1) {
+					inlineWidgetsByFunctionIdentifier[functionIdentifier] = new DocumentationInlineEditor(functionIdentifier, hostEditor, functionLocation.commentRange.start, functionLocation.commentRange.end);
 				}
-			}
+			});
 		});
 	}
 
@@ -73,49 +68,11 @@ define(function (require, exports, module) {
 		if ((inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] === undefined) && 
 			(newDoc.file === currentDocument.file.fullPath)) {
 
-			var fullText = currentDocument.getText(); 
-			var lines = fullText.split("\n");
-
-			for (var i = 0; i < lines.length; i++) {
-				var line = lines[i]; 
-
-				var lineNumber = line.indexOf("@uniqueFunctionIdentifier " + newDoc.functionIdentifier);
-				if (lineNumber !== -1) {
-					var commentRange = _extractCommentPositionStartingAtLineWithLineArray(lineNumber, lines);
-					inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] = new DocumentationInlineEditor(newDoc.functionIdentifier, hostEditor, commentRange.startPos, commentRange.endPos);
-				}
+			var functionLocation = FunctionTracker.functionLocationForFunctionIdentifier(newDoc.functionIdentifier);
+			if (functionLocation !== undefined) {
+				inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] = new DocumentationInlineEditor(newDoc.functionIdentifier, hostEditor, functionLocation.commentRange.start, functionLocation.commentRange.end);
 			}
 		}
-	}
-
-	function _extractCommentPositionStartingAtLineWithLineArray (lineNumber, lines) {
-		var startPos = {}; 
-		var endPos = {}; 
-
-		startPos.line = 0; 
-		var i = lineNumber - 1; 
-		while ((i >= 0) && (startPos.line === 0)) {
-			if (/^\s*\/\*\*/.test(lines[i])) {
-				startPos.line = i;
-				startPos.ch = lines[i].match(/^\s*/)[0].length;
-			}
-			i--;
-		}
-
-		endPos.line = 0; 
-		i = lineNumber + 1; 
-		while ((i < lines.length) && (endPos.line === 0)) {
-			if (/^\s*\*\//.test(lines[i])) {
-				endPos.line = i;
-				endPos.ch = lines[i].match(/^\s*\*\//)[0].length;
-			}
-			i++;
-		}	
-
-		return {
-			startPos: startPos,
-			endPos: endPos
-		};
 	}
 
 	AppInit.appReady(_init);
