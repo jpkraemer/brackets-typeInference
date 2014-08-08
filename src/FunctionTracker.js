@@ -1,6 +1,13 @@
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
 /*global define, $, brackets, Mustache */
 
+/**
+ * Dispatches the following events: 
+ * didUpdateTrackedFunctions - passes two parameters: 	trackedFunctions - as returned by functionLocationsInCurrentDocument
+ * 														unidentifiedFunctions -  as returned by functionLocationsWithoutIdInCurrentDocument
+ * 														change - the change that resulted in the update
+ */
+
 define(function (require, exports, module) {
 	"use strict"; 
 
@@ -13,6 +20,7 @@ define(function (require, exports, module) {
 	var EVENT_NAMESPACE = ".type-inference";
 
 	var trackedFunctions = {};
+	var untrackedFunctions = [];
 	var referencedEditor; 
 	var referencedDocument;
 
@@ -22,14 +30,22 @@ define(function (require, exports, module) {
 		_currentDocumentChanged(null, DocumentManager.getCurrentDocument(), null);
 	}
 
+	/**
+	 * Used to access all functions with a unique id
+	 * @return {{ FunctionIds: { functionLocation: Range, commentLocation: range } }} 
+	 */
 	function functionLocationsInCurrentDocument() {
 		return _.mapValues(trackedFunctions, function (value) {
-			_(value).omit(["commentBookmarks", "functionBookmarks"]).cloneDeep();
+			return _(value).omit(["commentBookmarks", "functionBookmarks"]).cloneDeep();
 		});
 	}
 
 	function functionLocationForFunctionIdentifier (functionIdentifier) {
 		return _(trackedFunctions[functionIdentifier]).omit(["commentBookmarks", "functionBookmarks"]).cloneDeep();
+	}
+
+	function functionLocationsWithoutIdInCurrentDocument () {
+		return _.cloneDeep(untrackedFunctions);
 	}
 
 	function _currentDocumentChanged (event, currentDocument, previousDocument) {
@@ -43,6 +59,8 @@ define(function (require, exports, module) {
 			referencedDocument.releaseRef();
 			referencedDocument = undefined;
 		}
+
+		_clearInformation();
 
 		if (currentDocument.getLanguage().getMode() !== "javascript") {
 			return; 
@@ -169,28 +187,29 @@ define(function (require, exports, module) {
 		}
 
 		if (syntaxCorrect) {
-			_(trackedFunctions).pluck("commentBookmarks").each(function (bookmark) {
-				bookmark.clear();
-			});
-			_(trackedFunctions).pluck("functionBookmarks").each(function (bookmark) {
-				bookmark.clear();
-			});
-			trackedFunctions = {};
+			_clearInformation();
 
 			parseAst(ast, { type: "FunctionDeclaration" }, function (node) {
+				var functionInfo;
+
 				if (node.leadingComments !== undefined) {
 					//try to find a unique function identifer
 					for (var i = 0; i < node.leadingComments.length; i++) {
 						var commentNode = node.leadingComments[i];
 						if (commentNode.type === "Block") {
+							var functionName; 
+							if (node.id !== undefined) {
+								functionName = node.id.name;
+							}
+
+							functionInfo = {
+								commentRange: esprimaLocationToRange(commentNode.loc),
+								functionRange: esprimaLocationToRange(node.loc),
+								functionName: functionName
+							};
 							var match = commentNode.value.match(/^\s*\*\s*@uniqueFunctionIdentifier (\S*)/m);
 							if (match) {
 								var functionIdentifier = match[1];
-								var functionInfo = {
-									commentRange: esprimaLocationToRange(commentNode.loc),
-									functionRange: esprimaLocationToRange(node.loc)
-								};
-
 								functionInfo.commentBookmarks = {
 									start: referencedEditor._codeMirror.setBookmark(functionInfo.commentRange.start),
 									end: referencedEditor._codeMirror.setBookmark(functionInfo.commentRange.end)
@@ -203,9 +222,16 @@ define(function (require, exports, module) {
 
 								trackedFunctions[functionIdentifier] = functionInfo;
 								break;
-							}						
+							} else {
+								untrackedFunctions.push(functionInfo);
+							}				
 						}
 					}
+				} else {
+					functionInfo = {
+						functionRange: esprimaLocationToRange(node.loc)
+					};
+					untrackedFunctions.push(functionInfo);
 				}
 			});
 		} else {
@@ -217,9 +243,25 @@ define(function (require, exports, module) {
 				locationInfo.commentRange.end 	= locationInfo.functionBookmarks.end.find();
 			});
 		}		
+
+		$(exports).trigger("didUpdateTrackedFunctions", [ functionLocationsInCurrentDocument(), functionLocationsWithoutIdInCurrentDocument(), changes ]);
+	}
+
+	function _clearInformation () {
+		_(trackedFunctions).pluck("commentBookmarks").each(function (bookmark) {
+			bookmark.start.clear();
+			bookmark.end.clear();
+		});
+		_(trackedFunctions).pluck("functionBookmarks").each(function (bookmark) {
+			bookmark.start.clear();
+			bookmark.end.clear();
+		});
+		trackedFunctions = {};
+		untrackedFunctions = [];
 	}
 
 	exports.init = init;
 	exports.functionLocationsInCurrentDocument = functionLocationsInCurrentDocument; 
 	exports.functionLocationForFunctionIdentifier = functionLocationForFunctionIdentifier;
+	exports.functionLocationsWithoutIdInCurrentDocument = functionLocationsWithoutIdInCurrentDocument;
 });

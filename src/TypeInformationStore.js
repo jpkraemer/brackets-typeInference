@@ -232,12 +232,10 @@ define(function (require, exports, module) {
 						{ $set: propertiesToUpdate },
 						{ upsert: true }
 					).done(function  (updateInfo) {
-						if (typesDidChange) {
-							if (updateInfo.newDoc !== undefined) {
-								$(exports).trigger("didUpdateTypeInformation", [updateInfo.newDoc]); 	
-							} else {
-								$(exports).trigger("didUpdateTypeInformation", [doc]); 
-							}
+						if (updateInfo.newDoc !== undefined) {
+							$(exports).trigger("didUpdateTypeInformation", [updateInfo.newDoc]); 	
+						} else {
+							$(exports).trigger("didUpdateTypeInformation", [doc]); 
 						}
 					}).fail(errorHandler);
 			}
