@@ -271,12 +271,14 @@ define(function (require, exports, module) {
                this.$contentDiv.append($line); 
            }
 
-           var $allTypeDivs = $(".ti-property-type");
-           var maxWidth = _.max($allTypeDivs.map(function() {
-               return $(this).width(); 
-           }).get());
-           //maxwidth should automatically include max-width set in css
-           $allTypeDivs.width(maxWidth);
+           var $allTypeDivs = this.$contentDiv.find(".ti-property-type");
+           setTimeout(function () {           
+               var maxWidth = _.max($allTypeDivs.map(function() {
+                   return $(this).width(); 
+               }).get());
+               //maxwidth should automatically include max-width set in css
+               $allTypeDivs.width(maxWidth);
+           }.bind(this), 1);
        }
 
        if (this.typeInformation.returnType) {
