@@ -77,6 +77,7 @@ define(function (require, exports, module) {
 					}
 
 					resultToPassOn.lastArguments = result.arguments; 
+					resultToPassOn.returnType = result.returnValue.typeSpec; 
 
 					resultsToPassOn.push(resultToPassOn); 
     			}

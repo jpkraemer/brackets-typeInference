@@ -41,8 +41,8 @@ define(function (require, exports, module) {
 
 		return: function (typeInformation, jsDoc) {
 			if (jsDoc.type !== undefined) {
-				typeInformation.return = _jsdocTypeToTypeSpec(jsDoc.type);
-				typeInformation.return.description = jsDoc.description === null ? undefined : jsDoc.description; 
+				typeInformation.returnType = _jsdocTypeToTypeSpec(jsDoc.type);
+				typeInformation.returnType.description = jsDoc.description === null ? undefined : jsDoc.description; 
 			}
 
 			return typeInformation;

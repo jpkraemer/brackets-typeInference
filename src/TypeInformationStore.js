@@ -216,20 +216,20 @@ define(function (require, exports, module) {
 				}
 			}
 
-			if (typeInformation.return !== undefined) {
-				var newType = typeInformation.return; 
+			if (typeInformation.returnType !== undefined) {
+				var newType = typeInformation.returnType; 
 				typesDidChange = !isUpdate; 
 				if (isUpdate) {
-					if (doc.return !== undefined) {
-						newType = _mergeTypeSpecs(typeInformation.return, doc.return);
-						typesDidChange = typesDidChange || (! _.isEqual(newType, doc.return));
+					if (doc.returnType !== undefined) {
+						newType = _mergeTypeSpecs(typeInformation.returnType, doc.returnType);
+						typesDidChange = typesDidChange || (! _.isEqual(newType, doc.returnType));
 					} else {
 						typesDidChange = true; 
 					}
 				}
 
 				if (typesDidChange) {
-					propertiesToUpdate.return = newType;
+					propertiesToUpdate.returnType = newType;
 				}
 			}
 

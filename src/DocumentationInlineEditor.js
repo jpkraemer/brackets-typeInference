@@ -279,8 +279,8 @@ define(function (require, exports, module) {
            $allTypeDivs.width(maxWidth);
        }
 
-       if (this.typeInformation.return) {
-            $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.return, false));
+       if (this.typeInformation.returnType) {
+            $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.returnType, false));
             $line.on("click", this._clickHandler.bind(this));
             this.$contentDiv.append($line);
        }
@@ -294,7 +294,7 @@ define(function (require, exports, module) {
         if ($target.hasClass('ti-property')) {
             var argumentId = $target.data("argumentId"); 
             if (argumentId !== undefined) {
-                this._displayEditorForPartOfTypeInfo({ partType: "parameters", id: argumentId });    
+                this._displayEditorForPartOfTypeInfo({ partType: "parameters", id: argumentId });
             } else {
                 this._displayEditorForPartOfTypeInfo({ partType: "return" });
             }            
@@ -355,7 +355,7 @@ define(function (require, exports, module) {
                 }); 
                 break;
             case "return": 
-                type = this.typeInformation.return; 
+                type = this.typeInformation.returnType; 
                 jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDoc(type, false);
 
                 $target = this.$contentDiv.find(".ti-property").filter(function (index) {
