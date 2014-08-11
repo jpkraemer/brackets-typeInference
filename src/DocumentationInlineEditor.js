@@ -287,7 +287,9 @@ define(function (require, exports, module) {
             this.$contentDiv.append($line);
        }
 
-       // this.hostEditor.setInlineWidgetHeight(this, this.$contentDiv.height(), true);
+       setTimeout(function () {
+           this.hostEditor.setInlineWidgetHeight(this, this.$contentDiv.height() + 10, true);
+       }.bind(this), 1);
    };
 
     DocumentationInlineEditor.prototype._clickHandler = function(event) {
