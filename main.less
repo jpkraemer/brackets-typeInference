@@ -1,4 +1,7 @@
 .ti-documentation-container {
+	padding-top: 5px;
+	padding-bottom: 10px;
+
 	.CodeMirror-sizer {
 		min-height: 14px !important;
 		overflow: visible;
@@ -20,6 +23,18 @@
 	font-family: "Lato"; 
 	strong {
 		font-weight: 800;
+	}
+
+	&:empty {
+		margin-top: 6px;
+		color: #8d8d8d;
+		&:after {
+			content: "Add some documentation!";
+		}
+	}
+
+	.ti-headline {
+		margin-top: 0;
 	}
 }
 

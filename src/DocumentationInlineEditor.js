@@ -205,6 +205,7 @@ define(function (require, exports, module) {
         this.$contentDiv = $("<div />")
                                 .addClass("ti-documentation-container")
                                 .css("margin-left", $(hostEditor._codeMirror.display.gutters).width());
+        this.$contentDiv.on("click", this._clickHandler.bind(this));
         this.$htmlContent.append(this.$contentDiv);
     };
 
@@ -257,7 +258,8 @@ define(function (require, exports, module) {
         var $descriptionContainer = $("<div />").addClass("ti-description"); 
         if (this.typeInformation.description) { 
             this.$contentDiv.append($("<h2 />").append("Description").addClass("ti-headline"));
-            $descriptionContainer.append(TypeInformationHTMLRenderer.markdownStringToHTML(this.typeInformation.description)); 
+            $descriptionContainer.append(TypeInformationHTMLRenderer.markdownStringToHTML(this.typeInformation.description));
+            $descriptionContainer.on("click", this._clickHandler.bind(this));
         }
         this.$contentDiv.append($descriptionContainer);
 
@@ -288,7 +290,7 @@ define(function (require, exports, module) {
        }
 
        setTimeout(function () {
-           this.hostEditor.setInlineWidgetHeight(this, this.$contentDiv.height() + 10, true);
+           this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
        }.bind(this), 1);
    };
 
@@ -302,6 +304,8 @@ define(function (require, exports, module) {
             } else {
                 this._displayEditorForPartOfTypeInfo({ partType: "return" });
             }            
+        } else {
+            this._displayEditorForPartOfTypeInfo({ partType: "description" });
         }
     };
 
@@ -343,11 +347,13 @@ define(function (require, exports, module) {
         var $target;
         var jsDoc;
         var type;
+        var needsTopMargin = false; 
 
         switch (docPartSpecifier.partType) {
             case "description": 
                 jsDoc = (this.typeInformation.description === undefined) ? "" : this.typeInformation.description; 
                 $target = this.$contentDiv.find(".ti-description");
+                needsTopMargin = $target.is(":empty");
                 break; 
             case "parameters": 
                 type = this.typeInformation.argumentTypes[docPartSpecifier.id]; 
@@ -374,6 +380,9 @@ define(function (require, exports, module) {
         codeMirrorOptions.value = jsDoc;
 
         this.inlineEditor = new CodeMirror(function (element) {
+            if (needsTopMargin) {
+                $(element).css("margin-top", "3px");
+            }
             $target.html(element);
         }, codeMirrorOptions);
 
