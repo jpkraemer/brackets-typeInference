@@ -15,7 +15,7 @@ define(function (require, exports, module) {
     var TypeInformationStore           = require("./TypeInformationStore");
     var TIUtils                        = require("./TIUtils");
 
-    var DOC_PART_ORDER                 = ["description", "parameters"];
+    var DOC_PART_ORDER                 = ["description", "parameters", "return"];
 
     /**
      * We add functionality to render inline widgets above the inserted line here. 
@@ -250,6 +250,8 @@ define(function (require, exports, module) {
      * This method rerenders the content of the widget
      */
      DocumentationInlineEditor.prototype._render = function() {
+        var $line;
+
         this.$contentDiv.empty();
 
         var $descriptionContainer = $("<div />").addClass("ti-description"); 
@@ -263,7 +265,7 @@ define(function (require, exports, module) {
            this.$contentDiv.append($("<h2 />").append("Parameters").addClass("ti-headline"));
 
            for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
-               var $line = $(TypeInformationHTMLRenderer.argumentTypeToHTML(this.typeInformation.argumentTypes[i]));
+               $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));
                $line.data("argumentId", i);
                $line.on("click", this._clickHandler.bind(this));
                this.$contentDiv.append($line); 
@@ -277,6 +279,12 @@ define(function (require, exports, module) {
            $allTypeDivs.width(maxWidth);
        }
 
+       if (this.typeInformation.return) {
+            $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.return, false));
+            $line.on("click", this._clickHandler.bind(this));
+            this.$contentDiv.append($line);
+       }
+
        // this.hostEditor.setInlineWidgetHeight(this, this.$contentDiv.height(), true);
    };
 
@@ -284,7 +292,12 @@ define(function (require, exports, module) {
         var $target = $(event.currentTarget);
 
         if ($target.hasClass('ti-property')) {
-            this._displayEditorForPartOfTypeInfo({ partType: "parameters", id: $target.data("argumentId") });     
+            var argumentId = $target.data("argumentId"); 
+            if (argumentId !== undefined) {
+                this._displayEditorForPartOfTypeInfo({ partType: "parameters", id: argumentId });    
+            } else {
+                this._displayEditorForPartOfTypeInfo({ partType: "return" });
+            }            
         }
     };
 
@@ -325,6 +338,7 @@ define(function (require, exports, module) {
 
         var $target;
         var jsDoc;
+        var type;
 
         switch (docPartSpecifier.partType) {
             case "description": 
@@ -332,13 +346,21 @@ define(function (require, exports, module) {
                 $target = this.$contentDiv.find(".ti-description");
                 break; 
             case "parameters": 
-                var type = this.typeInformation.argumentTypes[docPartSpecifier.id]; 
-                jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDocParam(type);
+                type = this.typeInformation.argumentTypes[docPartSpecifier.id]; 
+                jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDoc(type, true);
 
                 $target = this.$contentDiv.find(".ti-property").filter(function (index) {
                     //this inside this filter function refers to the DOM element!
                     return $(this).data("argumentId") === docPartSpecifier.id;
                 }); 
+                break;
+            case "return": 
+                type = this.typeInformation.return; 
+                jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDoc(type, false);
+
+                $target = this.$contentDiv.find(".ti-property").filter(function (index) {
+                    return $(this).data("argumentId") === undefined;
+                });
                 break;
             default: 
                 TIUtils.log("Unknown docPartSpecifier: " + docPartSpecifier.partType); 

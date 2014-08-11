@@ -183,6 +183,7 @@ define(function (require, exports, module) {
 			var isUpdate = false;
 			var doc;
 			var propertiesToUpdate = {};
+			var typesDidChange; 
 			
 			if (docs.length > 0) {
 				isUpdate = true; 
@@ -196,7 +197,7 @@ define(function (require, exports, module) {
 				var newTypes = typeInformation.argumentTypes;
 			
 				//types always changed if the record is new
-				var typesDidChange = !isUpdate; 
+				typesDidChange = !isUpdate; 
 
 				if (isUpdate) {
 					if ((doc.argumentTypes !== undefined) && (doc.argumentTypes.length === typeInformation.argumentTypes.length)) {
@@ -211,20 +212,36 @@ define(function (require, exports, module) {
 				} 
 
 				if (typesDidChange) {
-					doc.argumentTypes = newTypes; 	
 					propertiesToUpdate.argumentTypes = newTypes;	
 				}
 			}
 
+			if (typeInformation.return !== undefined) {
+				var newType = typeInformation.return; 
+				typesDidChange = !isUpdate; 
+				if (isUpdate) {
+					if (doc.return !== undefined) {
+						newType = _mergeTypeSpecs(typeInformation.return, doc.return);
+						typesDidChange = typesDidChange || (! _.isEqual(newType, doc.return));
+					} else {
+						typesDidChange = true; 
+					}
+				}
+
+				if (typesDidChange) {
+					propertiesToUpdate.return = newType;
+				}
+			}
+
 			if (typeInformation.lastArguments !== undefined) {
-				doc.lastArguments = typeInformation.lastArguments;
 				propertiesToUpdate.lastArguments = typeInformation.lastArguments;
 			}
 
 			if (typeInformation.file !== undefined) {
-				doc.file = typeInformation.file; 
 				propertiesToUpdate.file = typeInformation.file;
 			}
+
+			_.merge(doc, propertiesToUpdate);
 
 			if (_.size(propertiesToUpdate) > 0) {
 				_executeDatabaseCommand("update",  

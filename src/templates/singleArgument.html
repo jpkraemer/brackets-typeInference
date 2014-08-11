@@ -1,7 +1,8 @@
 <div class="ti-property">
 	<table>
 		<tr> 
-			<td class="ti-property-name">{{name}}</td>
+			{{#isArgument}}<td class="ti-property-name">{{name}}</td>{{/isArgument}}
+			{{^isArgument}}<td class="ti-property-name"><h2 class="ti-headline">Returns</h2></td>{{/isArgument}}
 			<td class="ti-property-type">{{{type}}}</td>
 			<td class="ti-property-description">{{{description}}}</td>
 		</tr>

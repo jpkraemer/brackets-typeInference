@@ -19,49 +19,10 @@ define(function (require, exports, module) {
 		 * @param  {jsDocObject} jsdoc
 		 * @return {TypeInformation} incomplete
 		 */
-		param: function (typeInformation, jsdoc) {
-			function _jsdocTypeToTypeSpec(jsdocType) { 
-				var result = {}; 
-				//sanity check
-				if ((jsdocType === null) || (jsdocType.type === null)) {
-					return result; 
-				}
-
-				switch (jsdocType.type) {
-					case "NameExpression":
-						result.type = jsdocType.name; 
-						var splitAtDot = result.type.split("."); 
-						if (splitAtDot.length === 2) {
-							result.type = splitAtDot[0];
-							result.count = Number(splitAtDot[1]);
-						}
-						break; 
-					case "UnionType":
-						result.type = "multiple"; 
-						result.spec = _.map(jsdocType.elements, _jsdocTypeToTypeSpec); 
-						break;
-					case "ArrayType":
-						result.type = "array";
-						result.spec = _.map(jsdocType.elements, _jsdocTypeToTypeSpec);
-						break;
-					case "RecordType":
-						result.type = "object"; 
-						result.spec = {}; 
-						for (var i = 0; i < jsdocType.fields.length; i++) {
-							var jsdocField = jsdocType.fields[i]; 
-							result.spec[jsdocField.key] = _jsdocTypeToTypeSpec(jsdocField.value);
-						}
-						break; 
-				}
-
-				result.type = result.type.toLowerCase();
-
-				return result;
-			}
-
-			var typeSpec = _jsdocTypeToTypeSpec(jsdoc.type); 
-			typeSpec.name = jsdoc.name === null ? undefined : jsdoc.name; 
-			typeSpec.description = jsdoc.description === null ? undefined : jsdoc.description; 
+		param: function (typeInformation, jsDoc) {
+			var typeSpec = _jsdocTypeToTypeSpec(jsDoc.type); 
+			typeSpec.name = jsDoc.name === null ? undefined : jsDoc.name; 
+			typeSpec.description = jsDoc.description === null ? undefined : jsDoc.description; 
 
 			//search for the parameter in the existing typeSpec
 			if (typeInformation.argumentTypes === undefined) {
@@ -73,6 +34,15 @@ define(function (require, exports, module) {
 				typeInformation.argumentTypes[indexOfOldType] = typeSpec; 
 			} else {
 				typeInformation.argumentTypes.push(typeSpec);
+			}
+
+			return typeInformation;
+		},
+
+		return: function (typeInformation, jsDoc) {
+			if (jsDoc.type !== undefined) {
+				typeInformation.return = _jsdocTypeToTypeSpec(jsDoc.type);
+				typeInformation.return.description = jsDoc.description === null ? undefined : jsDoc.description; 
 			}
 
 			return typeInformation;
@@ -111,19 +81,69 @@ define(function (require, exports, module) {
 	}
 
 	/**
+	 * Helper function converting the type part of a doctrine-parsed JSDoc to a typespec
+	 * @param  {Object} jsdocType
+	 * @return {Typespec}
+	 */
+	function _jsdocTypeToTypeSpec(jsdocType) { 
+		var result = {}; 
+		//sanity check
+		if ((jsdocType === null) || (jsdocType.type === null)) {
+			return result; 
+		}
+
+		switch (jsdocType.type) {
+			case "NameExpression":
+				result.type = jsdocType.name; 
+				var splitAtDot = result.type.split("."); 
+				if (splitAtDot.length === 2) {
+					result.type = splitAtDot[0];
+					result.count = Number(splitAtDot[1]);
+				}
+				break; 
+			case "UnionType":
+				result.type = "multiple"; 
+				result.spec = _.map(jsdocType.elements, _jsdocTypeToTypeSpec); 
+				break;
+			case "ArrayType":
+				result.type = "array";
+				result.spec = _.map(jsdocType.elements, _jsdocTypeToTypeSpec);
+				break;
+			case "RecordType":
+				result.type = "object"; 
+				result.spec = {}; 
+				for (var i = 0; i < jsdocType.fields.length; i++) {
+					var jsdocField = jsdocType.fields[i]; 
+					result.spec[jsdocField.key] = _jsdocTypeToTypeSpec(jsdocField.value);
+				}
+				break; 
+		}
+
+		result.type = result.type.toLowerCase();
+
+		return result;
+	}
+
+	/**
 	 * Generates @param JSDoc entries from the given argument types 
 	 * @param  {Typespec} argumentTypes
 	 * @return {String}
 	 */
-	function typeSpecToJSDocParam(type) {
-		var paramTemplate = require("text!./templates/param-jsdoc.txt"); 
+	function typeSpecToJSDoc(type, isArgument) {
 		var templateValues = {
-			name: type.name,
 			type: _jsDocTypeStringForTypespec(type),
 			description: type.description
 		};
 
-		return Mustache.render(paramTemplate, templateValues); 
+		var template;
+		if (isArgument) {
+			templateValues.name = type.name;
+			template = require("text!./templates/param-jsdoc.txt");
+		} else {
+			template = require("text!./templates/return-jsdoc.txt");
+		}
+	
+		return Mustache.render(template, templateValues); 
 	}
 
 	/**
@@ -166,7 +186,7 @@ define(function (require, exports, module) {
 		return "@uniqueFunctionIdentifier " + functionIdentifier;
 	}
 
-	exports.typeSpecToJSDocParam = typeSpecToJSDocParam;
+	exports.typeSpecToJSDoc = typeSpecToJSDoc;
 	exports.functionIdentifierToJSDoc = functionIdentifierToJSDoc;
 	exports.updateTypeInformationWithJSDoc = updateTypeInformationWithJSDoc;
 

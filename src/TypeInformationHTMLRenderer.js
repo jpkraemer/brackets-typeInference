@@ -7,9 +7,10 @@ define(function (require, exports, module) {
 	var _ 				= require("./lib/lodash");
 	var marked 			= require("./node/node_modules/marked/lib/marked");
 
-	function argumentTypeToHTML (type) {
+	function typeToHTML (type, isArgument) {
 		var singleArgumentTemplate = require("text!./templates/singleArgument.html");
 		var templateValues = {
+			isArgument: isArgument,
 			name: type.name,
 			type: _typeSpecToHTML(type)
 		};
@@ -73,7 +74,7 @@ define(function (require, exports, module) {
 		return result;
 	}
 
-	exports.argumentTypeToHTML = argumentTypeToHTML;
+	exports.typeToHTML = typeToHTML;
 	exports.markdownStringToHTML = markdownStringToHTML; 
 
 });
