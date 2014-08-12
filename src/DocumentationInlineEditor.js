@@ -86,6 +86,11 @@ define(function (require, exports, module) {
 		this._startBookmark 	= hostEditor._codeMirror.setBookmark(startPos); 
 		this._endBookmark 		= hostEditor._codeMirror.setBookmark(endPos);
 
+        this._onEditorBlur              = this._onEditorBlur.bind(this);
+        this._onEditorKeyEvent          = this._onEditorKeyEvent.bind(this);
+        this._didUpdateTypeInformation  = this._didUpdateTypeInformation.bind(this);
+        this._clickHandler              = this._clickHandler.bind(this);
+
 		InlineWidget.call(this);
 
         TypeInformationStore.typeInformationForFunctionIdentifer(this.functionIdentifier).done(function (docs) {
@@ -98,7 +103,7 @@ define(function (require, exports, module) {
                 hostEditor.addInlineWidgetAbove({ line: endPos.line + 1, ch: 0 }, this, true);
                 hostEditor._hideLines(startPos.line, endPos.line + 1);
 
-                $(TypeInformationStore).on("didUpdateTypeInformation", this._didUpdateTypeInformation.bind(this));
+                $(TypeInformationStore).on("didUpdateTypeInformation", this._didUpdateTypeInformation);
             }
         }.bind(this));
 	}
@@ -206,7 +211,7 @@ define(function (require, exports, module) {
         this.$contentDiv = $("<div />")
                                 .addClass("ti-documentation-container")
                                 .css("margin-left", $(hostEditor._codeMirror.display.gutters).width());
-        this.$contentDiv.on("click", this._clickHandler.bind(this));
+        this.$contentDiv.on("click", this._clickHandler);
         this.$htmlContent.append(this.$contentDiv);
     };
 
@@ -254,41 +259,44 @@ define(function (require, exports, module) {
      DocumentationInlineEditor.prototype._render = function() {
         var $line;
 
+        this._closeEditor();
         this.$contentDiv.empty();
 
         var $descriptionContainer = $("<div />").addClass("ti-description"); 
         if (this.typeInformation.description) { 
             this.$contentDiv.append($("<h2 />").append("Description").addClass("ti-headline"));
             $descriptionContainer.append(TypeInformationHTMLRenderer.markdownStringToHTML(this.typeInformation.description));
-            $descriptionContainer.on("click", this._clickHandler.bind(this));
+            $descriptionContainer.on("click", this._clickHandler);
         }
         this.$contentDiv.append($descriptionContainer);
 
         if (this.typeInformation.argumentTypes && (this.typeInformation.argumentTypes.length > 0)) {
-           this.$contentDiv.append($("<h2 />").append("Parameters").addClass("ti-headline"));
+            this.$contentDiv.append($("<h2 />").append("Parameters").addClass("ti-headline"));
 
-           for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
-               $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));
-               $line.data("argumentId", i);
-               $line.on("click", this._clickHandler.bind(this));
-               this.$contentDiv.append($line); 
-           }
+            for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
+                $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));
+                $line.data("argumentId", i);
+                $line.on("click", this._clickHandler);
+                this.$contentDiv.append($line); 
+            }
 
-           var $allTypeDivs = this.$contentDiv.find(".ti-property-type");
-           setTimeout(function () {           
-               var maxWidth = _.max($allTypeDivs.map(function() {
-                   return $(this).width(); 
-               }).get());
-               //maxwidth should automatically include max-width set in css
-               $allTypeDivs.width(maxWidth);
-           }.bind(this), 1);
-       }
+            var $allTypeDivs = this.$contentDiv.find(".ti-property-type");
+            setTimeout(function () {           
+                var maxWidth = _.max($allTypeDivs.map(function() {
+                    return $(this).width(); 
+                }).get());
+                //maxwidth should automatically include max-width set in css
+                $allTypeDivs.width(maxWidth);
+            }.bind(this), 1);
+        }
 
-       if (this.typeInformation.returnType) {
+        if (this.typeInformation.returnType) {
             $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.returnType, false));
-            $line.on("click", this._clickHandler.bind(this));
+            $line.on("click", this._clickHandler);
             this.$contentDiv.append($line);
-       }
+        }
+
+        this._displayEditorForPartOfTypeInfo();
 
        setTimeout(function () {
            this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
@@ -301,24 +309,28 @@ define(function (require, exports, module) {
         if ($target.hasClass('ti-property')) {
             var argumentId = $target.data("argumentId"); 
             if (argumentId !== undefined) {
-                this._displayEditorForPartOfTypeInfo({ partType: "parameters", id: argumentId });
+                this.docPartSpecifier = { partType: "parameters", id: argumentId }; 
             } else {
-                this._displayEditorForPartOfTypeInfo({ partType: "return" });
+                this.docPartSpecifier = { partType: "return" }; 
             }            
         } else {
-            this._displayEditorForPartOfTypeInfo({ partType: "description" });
+            this.docPartSpecifier = { partType: "description" }; 
         }
+
+        this._displayEditorForPartOfTypeInfo();
+        event.stopPropagation();
     };
 
     DocumentationInlineEditor.prototype._closeEditor = function() {
         if (this.inlineEditor !== null) {
+            //tear down notifications to make sure don't get a blur event that would cause us to forget the docPartSpecifier
+            this.inlineEditor.off("blur", this._onEditorBlur);
+
             var jsdocString = this.inlineEditor.getValue();
             this.typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(this.typeInformation, jsdocString);
             JSDocTypeProvider.updateDocumentWithTypeInformation(this.hostEditor.document, this.typeInformation);
 
-            this.docPartSpecifier = null; 
             this.inlineEditor = null;
-            this._render(); 
         }
     };
 
@@ -326,17 +338,10 @@ define(function (require, exports, module) {
      * This function shows an editor for the specified part of the documentat. Other open editors are closed. 
      * @param  {{partType: string, id: number}} docPartSpecifier partType can be "parameters", "description"
      */
-    DocumentationInlineEditor.prototype._displayEditorForPartOfTypeInfo = function(docPartSpecifier) {
-        if (_.isEqual(this.docPartSpecifier, docPartSpecifier)) {
-            //nothing to change
+    DocumentationInlineEditor.prototype._displayEditorForPartOfTypeInfo = function() {
+        if (this.docPartSpecifier === null) {
             return;
         }
-
-        if (this.inlineEditor !== null) {
-            this._closeEditor();
-        }
-
-        this.docPartSpecifier = docPartSpecifier;
 
         var codeMirrorOptions = {
             mode: "markdown",
@@ -351,19 +356,20 @@ define(function (require, exports, module) {
         var type;
         var needsTopMargin = false; 
 
-        switch (docPartSpecifier.partType) {
+        switch (this.docPartSpecifier.partType) {
             case "description": 
                 jsDoc = (this.typeInformation.description === undefined) ? "" : this.typeInformation.description; 
                 $target = this.$contentDiv.find(".ti-description");
                 needsTopMargin = $target.is(":empty");
                 break; 
             case "parameters": 
-                type = this.typeInformation.argumentTypes[docPartSpecifier.id]; 
+                type = this.typeInformation.argumentTypes[this.docPartSpecifier.id]; 
                 jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDoc(type, true);
 
+                var self = this; 
                 $target = this.$contentDiv.find(".ti-property").filter(function (index) {
                     //this inside this filter function refers to the DOM element!
-                    return $(this).data("argumentId") === docPartSpecifier.id;
+                    return $(this).data("argumentId") === self.docPartSpecifier.id;
                 }); 
                 break;
             case "return": 
@@ -375,7 +381,7 @@ define(function (require, exports, module) {
                 });
                 break;
             default: 
-                TIUtils.log("Unknown docPartSpecifier: " + docPartSpecifier.partType); 
+                TIUtils.log("Unknown docPartSpecifier: " + this.docPartSpecifier.partType); 
                 return;
         }
 
@@ -388,8 +394,8 @@ define(function (require, exports, module) {
             $target.html(element);
         }, codeMirrorOptions);
 
-        this.inlineEditor.on("keydown", this._onEditorKeyEvent.bind(this));
-        this.inlineEditor.on("blur", this._onEditorBlur.bind(this));
+        this.inlineEditor.on("keydown", this._onEditorKeyEvent);
+        this.inlineEditor.on("blur", this._onEditorBlur);
 
         this.inlineEditor.focus();
         this.inlineEditor.setCursor(0, jsDoc.length - 1);
@@ -415,18 +421,24 @@ define(function (require, exports, module) {
             case 38: //Arrow Up Key
                 //Arrow Key Up
                 if (cursorPos.line === 0) {
-                    this._displayEditorForPartOfTypeInfo(this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier, true));
+                    this.docPartSpecifier = this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier, true);
+                    this._render();
                 }
                 break;
             case 40:
                 if (cursorPos.line === this.inlineEditor.lineCount() - 1) {
-                    this._displayEditorForPartOfTypeInfo(this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier));
+                    this.docPartSpecifier = this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier);
+                    this._render();
                 }
                 break;
         }
     };
 
+    /**
+     * Handler for when an editor looses focus
+     */
     DocumentationInlineEditor.prototype._onEditorBlur = function() {
+        this.docPartSpecifier = null;
         this._closeEditor();
     };
 
