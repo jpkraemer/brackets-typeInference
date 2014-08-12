@@ -1,0 +1,10 @@
+{{=<% %>=}}<% description %>
+<% #argumentTypes %>
+<% > param %>
+
+<% /argumentTypes %>
+<% #returnType %>
+<% > return %>
+
+<% /returnType %>
+@uniqueFunctionIdentifier <% & functionIdentifier %>

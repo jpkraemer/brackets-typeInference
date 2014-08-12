@@ -125,8 +125,10 @@ define(function (require, exports, module) {
 	 * Callback fired by Type providers. 
 	 * @param  {Event} event
 	 * @param  {[Type Information records]} results
+	 * @param {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
+	 * if false the existing record will be overwritten.
 	 */
-	function _didReceiveTypeInformation (event, results) {
+	function _didReceiveTypeInformation (event, results, isMerge) {
 		var i, j;
 
 		if (!Array.isArray(results)) {
@@ -156,18 +158,18 @@ define(function (require, exports, module) {
 			var mergedTypeInformation = _.last(resultsForFunctionIdentifier); 
 			mergedTypeInformation.argumentTypes = aggregateTypes;
 			
-			_updateWithTypeInformation(mergedTypeInformation);
+			_updateWithTypeInformation(mergedTypeInformation, isMerge);
 			// _updateTypeForFunctionWithTypesAndArguments(functionIdentifier, aggregateTypes, resultsForNodeId[resultsForNodeId.length - 1].arguments);	
 		});
 	}
 
 	/**
 	 * This method updates type information. Type information degrades always to the most specific type spec possible, that still matches all arugments seen so far. 
-	 * @param  {String} functionIdentifier
-	 * @param  {[Typespec]} types
-	 * @param  {[type]} arguments
+	 * @param  {TypeInformation} new type information
+	 * @param {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
+	 * if false the existing record will be overwritten.
 	 */
-	function _updateWithTypeInformation (typeInformation) {
+	function _updateWithTypeInformation (typeInformation, isMerge) {
 
 		var successHandler = function (newDocs) {
 			TIUtils.log("Successfully update type information: " + newDocs);
@@ -183,6 +185,7 @@ define(function (require, exports, module) {
 			var isUpdate = false;
 			var doc;
 			var propertiesToUpdate = {};
+			var propertiesToRemove = {};
 			var typesDidChange; 
 			
 			if (docs.length > 0) {
@@ -193,60 +196,75 @@ define(function (require, exports, module) {
 				doc = typeInformation;
 			}
 
-			if (typeInformation.argumentTypes !== undefined) {
-				var newTypes = typeInformation.argumentTypes;
-			
-				//types always changed if the record is new
-				typesDidChange = !isUpdate; 
+			if ((! isMerge) && isUpdate) {
+				_.union(_.keys(typeInformation), _.keys(doc)).forEach(function(key) {
+					//don't change the db-internal id
+					if (key === "_id") {
+						return;
+					}
 
-				if (isUpdate) {
-					if ((doc.argumentTypes !== undefined) && (doc.argumentTypes.length === typeInformation.argumentTypes.length)) {
-						for (var i = 0; i < typeInformation.argumentTypes.length; i++) {
-							newTypes[i] = _mergeTypeSpecs(typeInformation.argumentTypes[i], doc.argumentTypes[i]); 
-							typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], doc.argumentTypes[i]));
-						}
+					if (typeInformation[key] !== undefined) {
+						propertiesToUpdate[key] = typeInformation[key];
 					} else {
-						//either length changed or type info was just added
-						typesDidChange = true;
+						propertiesToRemove[key] = true;
+						doc[key] = undefined;
+					}
+				}); 
+			} else {
+				if (typeInformation.argumentTypes !== undefined) {
+					var newTypes = typeInformation.argumentTypes;
+				
+					//types always changed if the record is new
+					typesDidChange = !isUpdate; 
+
+					if (isUpdate) {
+						if ((doc.argumentTypes !== undefined) && (doc.argumentTypes.length === typeInformation.argumentTypes.length)) {
+							for (var i = 0; i < typeInformation.argumentTypes.length; i++) {
+								newTypes[i] = _mergeTypeSpecs(typeInformation.argumentTypes[i], doc.argumentTypes[i]); 
+								typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], doc.argumentTypes[i]));
+							}
+						} else {
+							//either length changed or type info was just added
+							typesDidChange = true;
+						}
+					} 
+
+					if (typesDidChange) {
+						propertiesToUpdate.argumentTypes = newTypes;	
 					}
 				} 
 
-				if (typesDidChange) {
-					propertiesToUpdate.argumentTypes = newTypes;	
-				}
-			}
+				if (typeInformation.returnType !== undefined) {
+					var newType = typeInformation.returnType; 
+					typesDidChange = !isUpdate; 
+					if (isUpdate) {
+						if (doc.returnType !== undefined) {
+							newType = _mergeTypeSpecs(typeInformation.returnType, doc.returnType);
+							typesDidChange = typesDidChange || (! _.isEqual(newType, doc.returnType));
+						} else {
+							typesDidChange = true; 
+						}
+					}
 
-			if (typeInformation.returnType !== undefined) {
-				var newType = typeInformation.returnType; 
-				typesDidChange = !isUpdate; 
-				if (isUpdate) {
-					if (doc.returnType !== undefined) {
-						newType = _mergeTypeSpecs(typeInformation.returnType, doc.returnType);
-						typesDidChange = typesDidChange || (! _.isEqual(newType, doc.returnType));
-					} else {
-						typesDidChange = true; 
+					if (typesDidChange) {
+						propertiesToUpdate.returnType = newType;
 					}
 				}
 
-				if (typesDidChange) {
-					propertiesToUpdate.returnType = newType;
-				}
-			}
-
-			if (typeInformation.lastArguments !== undefined) {
-				propertiesToUpdate.lastArguments = typeInformation.lastArguments;
-			}
-
-			if (typeInformation.file !== undefined) {
-				propertiesToUpdate.file = typeInformation.file;
+				_(typeInformation).omit("argumentTypes", "returnType").forOwn(function(value, key) {
+					if (doc[key] !== typeInformation[key]) {
+						propertiesToUpdate[key] = typeInformation[key];
+						typesDidChange = true;
+					}
+				});
 			}
 
 			_.merge(doc, propertiesToUpdate);
 
-			if (_.size(propertiesToUpdate) > 0) {
+			if ((_.size(propertiesToUpdate) + _.size(propertiesToRemove)) > 0) {
 				_executeDatabaseCommand("update",  
 						{ functionIdentifier: typeInformation.functionIdentifier }, 
-						{ $set: propertiesToUpdate },
+						{ $set: propertiesToUpdate, $unset: propertiesToRemove },
 						{ upsert: true }
 					).done(function  (updateInfo) {
 						if (updateInfo.newDoc !== undefined) {

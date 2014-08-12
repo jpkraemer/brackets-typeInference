@@ -10,6 +10,7 @@ define(function (require, exports, module) {
     var CodeMirror                     = brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
     var Editor                         = brackets.getModule("editor/Editor").Editor;
 	var InlineWidget 			       = brackets.getModule("editor/InlineWidget").InlineWidget;
+    var JSDocTypeProvider              = require("./JSDocTypeProvider");
     var TypeInformationHTMLRenderer    = require("./TypeInformationHTMLRenderer");
     var TypeInformationJSDocRenderer   = require("./TypeInformationJSDocRenderer");
     var TypeInformationStore           = require("./TypeInformationStore");
@@ -313,6 +314,7 @@ define(function (require, exports, module) {
         if (this.inlineEditor !== null) {
             var jsdocString = this.inlineEditor.getValue();
             this.typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(this.typeInformation, jsdocString);
+            JSDocTypeProvider.updateDocumentWithTypeInformation(this.hostEditor.document, this.typeInformation);
 
             this.docPartSpecifier = null; 
             this.inlineEditor = null;

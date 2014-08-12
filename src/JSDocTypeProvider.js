@@ -15,6 +15,7 @@
  	var CommandManager			 		= brackets.getModule("command/CommandManager");
  	var FunctionTracker					= require("./FunctionTracker");
  	var JSUtils 						= brackets.getModule("language/JSUtils");
+ 	var TIUtils 						= require("./TIUtils");
  	var TypeInformationJSDocRenderer 	= require("./TypeInformationJSDocRenderer");
 
  	var EVENT_NAMESPACE = ".JSDocTypeProvider";
@@ -66,16 +67,14 @@
 				file: document.file.fullPath
 			};
 			var functionIdentifierJSDoc = " * " + TypeInformationJSDocRenderer.functionIdentifierToJSDoc(typeInformation.functionIdentifier) + "\n";
-			var commentInset; 
+			var commentInset = _commentInsetForDocumentAndFunctionInfo(document, functionInfo); 
 			if (functionInfo.commentRange !== undefined) {
 				var commentAsTypeInformation = _updateTypeInformationWithCommentRange({}, document, functionInfo.commentRange);
 				_.merge(typeInformation, commentAsTypeInformation);
 				if (commentAsTypeInformation.functionIdentifier === undefined) {
-					commentInset = document.getRange({ line: functionInfo.commentRange.start.line, ch: 0 }, functionInfo.commentRange.start);
 					document.replaceRange(commentInset + functionIdentifierJSDoc, { line: functionInfo.commentRange.end.line, ch: 0 });
 				}
 			} else {
-				commentInset = document.getRange({ line: functionInfo.functionRange.start.line, ch: 0 }, functionInfo.functionRange.start);
 				var newCommentText = "\n" + commentInset + "/**\n" + commentInset + functionIdentifierJSDoc + commentInset + " */";
 				document.replaceRange(newCommentText, functionInfo.functionRange.start);
 			}
@@ -86,7 +85,7 @@
 			CommandManager.execute(Commands.FILE_SAVE, document);
 		}
 
-		$(exports).trigger("didReceiveTypeInformation", [ results ]);
+		$(exports).trigger("didReceiveTypeInformation", [ results ], false);
 	}
 
 	/**
@@ -102,7 +101,50 @@
 			results.push(typeInformation);
 		});
 		
-		$(exports).trigger("didReceiveTypeInformation", [ results ]); 
+		$(exports).trigger("didReceiveTypeInformation", [ results ], false); 
+	}
+
+	/**
+	 * Update document with information from the given typespec
+	 * @param {TypeInformation} typeInformation 
+	 */
+	function updateDocumentWithTypeInformation (document, typeInformation) { 
+		var functionInfo = FunctionTracker.functionLocationForFunctionIdentifier(typeInformation.functionIdentifier);
+		var documentWasDirty = document.isDirty; 
+			
+		if ((functionInfo !== undefined) && 
+			(functionInfo.commentRange !== undefined)) {
+			//&&
+			// (document.file.fullPath === typeInformation.path))
+
+			var jsDocString = TypeInformationJSDocRenderer.typeInformationToJSDoc(typeInformation); 
+			var commentInset = _commentInsetForDocumentAndFunctionInfo(document, functionInfo);
+
+			var commentLines = jsDocString.split("\n");
+			commentLines = _.map(commentLines, function (line) {
+				return commentInset + " * " + line;
+			});
+
+			var newComment = commentInset + "/**\n" + commentLines.join("\n") + "\n" + commentInset + " */";
+			document.replaceRange(newComment, functionInfo.commentRange.start, functionInfo.commentRange.end);
+			
+			if (! documentWasDirty) {
+				CommandManager.execute(Commands.FILE_SAVE, document);
+			}
+		} else {
+			TIUtils.log("Something went wrong, called update with typeInformation for other document or untracked function.");
+		}
+	}
+
+	function _commentInsetForDocumentAndFunctionInfo (document, functionInfo) {
+		var commentInset;
+		if (functionInfo.commentRange !== undefined) {
+			commentInset = document.getRange({ line: functionInfo.commentRange.start.line, ch: 0 }, functionInfo.commentRange.start);
+		} else {
+			commentInset = document.getRange({ line: functionInfo.functionRange.start.line, ch: 0 }, functionInfo.functionRange.start);
+		}
+
+		return commentInset;
 	}
 
 	function _updateTypeInformationWithCommentRange (typeInformation, document, commentRange) {
@@ -112,4 +154,5 @@
 	}
 
 	exports.init = init; 
+	exports.updateDocumentWithTypeInformation = updateDocumentWithTypeInformation;
 });

@@ -63,9 +63,7 @@ define(function (require, exports, module) {
 	function updateTypeInformationWithJSDoc (typeInformation, jsdocString) {
 		var jsdoc = doctrine.parse(jsdocString);
 
-		if (jsdoc.description !== "") {
-			typeInformation.description = jsdoc.description === null ? undefined : jsdoc.description; 
-		}
+		typeInformation.description = jsdoc.description === null ? undefined : jsdoc.description; 
 
 		for (var i = 0; i < jsdoc.tags.length; i++) {
 			var jsdocTag = jsdoc.tags[i]; 
@@ -146,37 +144,66 @@ define(function (require, exports, module) {
 		return Mustache.render(template, templateValues); 
 	}
 
+	function typeInformationToJSDoc (typeInformation) {
+		var template = require("text!./templates/full-jsdoc.txt");
+		var templateValues = {
+			description: typeInformation.description,
+			functionIdentifier: typeInformation.functionIdentifier
+		};
+
+		if (typeInformation.returnType !== undefined) {
+			templateValues.returnType = {
+				type: _jsDocTypeStringForTypespec(typeInformation.returnType), 
+				description: typeInformation.returnType.description
+			};
+		}
+
+		if (typeInformation.argumentTypes !== undefined) {
+			templateValues.argumentTypes = _.map(typeInformation.argumentTypes, function (type) {
+				var result = _.pick(type, "name", "description"); 
+				result.type = _jsDocTypeStringForTypespec(type);
+			});
+		}
+
+		return Mustache.render(template, typeInformation, {
+			param: require("text!./templates/param-jsdoc.txt"),
+			return: require("text!./templates/return-jsdoc.txt")
+		}); 
+	}
+
 	/**
 	 * Generates the type portion of a JSDoc @param entry
 	 * @param  {Typespec} type
 	 * @return {String}
 	 */
 	function _jsDocTypeStringForTypespec (type) {
-		var result; 
+		var result = ""; 
 
-		switch (type.type) {
-			case "array": 
-				result = "[" + _.map(type.spec, _jsDocTypeStringForTypespec).join(', ') + "]";
-				break;
-			case "object":
-				result = "{ "; 
-				result +=  _.chain(type.spec)
-								.mapValues(_jsDocTypeStringForTypespec)
-								.pairs()
-								.map(function (pair) { return pair.join(": "); })
-								.value()
-								.join(", ");
-				result += " }";
-				break; 
-			case "multiple":
-				result = "(" + _.pluck(type.spec, "type").join("|") + ")";
-				break; 
-			default: 
-				result = type.type;
-		}
+		if (type !== undefined) {
+			switch (type.type) {
+				case "array": 
+					result = "[" + _.map(type.spec, _jsDocTypeStringForTypespec).join(', ') + "]";
+					break;
+				case "object":
+					result = "{ "; 
+					result +=  _.chain(type.spec)
+									.mapValues(_jsDocTypeStringForTypespec)
+									.pairs()
+									.map(function (pair) { return pair.join(": "); })
+									.value()
+									.join(", ");
+					result += " }";
+					break; 
+				case "multiple":
+					result = "(" + _.pluck(type.spec, "type").join("|") + ")";
+					break; 
+				default: 
+					result = type.type;
+			}
 
-		if (type.hasOwnProperty("count")) {
-			result += "." + type.count; 
+			if (type.hasOwnProperty("count")) {
+				result += "." + type.count; 
+			}
 		}
 
 		return result;
@@ -187,6 +214,7 @@ define(function (require, exports, module) {
 	}
 
 	exports.typeSpecToJSDoc = typeSpecToJSDoc;
+	exports.typeInformationToJSDoc = typeInformationToJSDoc; 
 	exports.functionIdentifierToJSDoc = functionIdentifierToJSDoc;
 	exports.updateTypeInformationWithJSDoc = updateTypeInformationWithJSDoc;
 
