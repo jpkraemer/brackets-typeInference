@@ -18,18 +18,19 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 					= require("./lib/lodash");
-	var Async				= brackets.getModule("utils/Async");
-	var ExtensionUtils 		= brackets.getModule("utils/ExtensionUtils");
-	var JSDocTypeProvider 	= require("./JSDocTypeProvider");
-	var NodeDomain			= brackets.getModule("utils/NodeDomain");
-	var ProjectManager 		= brackets.getModule("project/ProjectManager");
-	var TheseusTypeProvider	= require('./TheseusTypeProvider');
-	var TIDatabase 			= new NodeDomain("TIDatabase", ExtensionUtils.getModulePath(module, "node/TIDatabaseDomain"));
-	var TIUtils 			= require("./TIUtils");
+	var _ 							= require("./lib/lodash");
+	var Async						= brackets.getModule("utils/Async");
+	var DocumentationInlineEditor 	= require("./DocumentationInlineEditor");
+	var ExtensionUtils 				= brackets.getModule("utils/ExtensionUtils");
+	var JSDocTypeProvider 			= require("./JSDocTypeProvider");
+	var NodeDomain					= brackets.getModule("utils/NodeDomain");
+	var ProjectManager 				= brackets.getModule("project/ProjectManager");
+	var TheseusTypeProvider			= require('./TheseusTypeProvider');
+	var TIDatabase 					= new NodeDomain("TIDatabase", ExtensionUtils.getModulePath(module, "node/TIDatabaseDomain"));
+	var TIUtils 					= require("./TIUtils");
 
-	var PRIMITIVE_TYPES 	= ["string", "number", "boolean", "function"];
 
+	var PRIMITIVE_TYPES = ["string", "number", "boolean", "function"];
 
 	var projectRoot;
 	var projectTypeDatabaseHandle;
@@ -119,6 +120,10 @@ define(function (require, exports, module) {
 		}).fail(function (err) {
 			TIUtils.log("Error creating or loading database for project " + projectRoot.fullPath + " with Error: " + err);
 		});
+	}
+
+	function userUpdatedTypeInformation (results, isMerge) {
+		_didReceiveTypeInformation(null, results, isMerge);
 	}
 
 	/**
@@ -567,5 +572,6 @@ define(function (require, exports, module) {
 	exports.forTests.mergeCounts = _mergeCounts;
 	exports.typeInformationForFunctionIdentifer = typeInformationForFunctionIdentifer;
 	exports.functionIdentifiersForFile = functionIdentifiersForFile;
+	exports.userUpdatedTypeInformation = userUpdatedTypeInformation; 
 	exports.PRIMITIVE_TYPES = PRIMITIVE_TYPES;
 });

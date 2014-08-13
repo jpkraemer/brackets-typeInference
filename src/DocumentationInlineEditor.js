@@ -249,8 +249,10 @@ define(function (require, exports, module) {
                 ". Aborting update!");
         }
 
-        this.typeInformation = typeInformation;
-        this._render();  
+        if (! _.isEqual(this.typeInformation, typeInformation)) { 
+            this.typeInformation = typeInformation;
+            this._render();  
+        }
     };
 
     /**
@@ -327,8 +329,18 @@ define(function (require, exports, module) {
             this.inlineEditor.off("blur", this._onEditorBlur);
 
             var jsdocString = this.inlineEditor.getValue();
-            this.typeInformation = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(this.typeInformation, jsdocString);
-            JSDocTypeProvider.updateDocumentWithTypeInformation(this.hostEditor.document, this.typeInformation);
+            var typeInformationUpdate = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(_.cloneDeep(this.typeInformation), jsdocString);
+            //Only update the info we need. The other information might be wrong, e.g. description will always be empty when editing 
+            //something else but description
+            var $wrapper = $(this.inlineEditor.getWrapperElement()).parent(); 
+            if ($wrapper.hasClass('ti-description')) {
+                this.typeInformation.description = typeInformationUpdate.description;
+            } else if ($wrapper.hasClass('ti-property')) {
+                this.typeInformation.argumentTypes = typeInformationUpdate.argumentTypes;
+                this.typeInformation.returnType = typeInformationUpdate.returnType; 
+            }
+
+            TypeInformationStore.userUpdatedTypeInformation([ this.typeInformation ], false);
 
             this.inlineEditor = null;
         }

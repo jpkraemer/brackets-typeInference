@@ -17,6 +17,7 @@
  	var JSUtils 						= brackets.getModule("language/JSUtils");
  	var TIUtils 						= require("./TIUtils");
  	var TypeInformationJSDocRenderer 	= require("./TypeInformationJSDocRenderer");
+ 	var TypeInformationStore			= require("./TypeInformationStore");
 
  	var EVENT_NAMESPACE = ".JSDocTypeProvider";
 
@@ -27,6 +28,7 @@
  		_setCurrentDocument(DocumentManager.getCurrentDocument()); 
 
  		$(FunctionTracker).on("didUpdateTrackedFunctions" + EVENT_NAMESPACE, _didUpdateTrackedFunctions);
+ 		$(TypeInformationStore).on("didUpdateTypeInformation" + EVENT_NAMESPACE, _didUpdateTypeInformation);
  	}
 
  	function _didChangeCurrentDocument (event, newDocument, oldDocument) {
@@ -37,6 +39,13 @@
  		currentDocument = newDocument;
  		// _addFunctionIdentifiersInDocument(currentDocument);
  		// _parseInformationFromDocument(currentDocument);
+ 	}
+
+ 	function _didUpdateTypeInformation (evt, typeInformation) {
+ 		DocumentManager.getDocumentForPath(typeInformation.file).done(function (doc) {
+ 			updateDocumentWithTypeInformation(doc, typeInformation);
+ 		}); 
+ 		
  	}
 
  	function _didUpdateTrackedFunctions (event, indexedFunctions, unindexedFunctions, changes) {
@@ -109,6 +118,8 @@
 	 * @param {TypeInformation} typeInformation 
 	 */
 	function updateDocumentWithTypeInformation (document, typeInformation) { 
+		$(FunctionTracker).off(EVENT_NAMESPACE);
+
 		var functionInfo = FunctionTracker.functionLocationForFunctionIdentifier(typeInformation.functionIdentifier);
 		var documentWasDirty = document.isDirty; 
 			
@@ -134,6 +145,8 @@
 		} else {
 			TIUtils.log("Something went wrong, called update with typeInformation for other document or untracked function.");
 		}
+
+		$(FunctionTracker).on("didUpdateTrackedFunctions" + EVENT_NAMESPACE, _didUpdateTrackedFunctions);
 	}
 
 	function _commentInsetForDocumentAndFunctionInfo (document, functionInfo) {
