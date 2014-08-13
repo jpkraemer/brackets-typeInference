@@ -44,6 +44,11 @@ define(function (require, exports, module) {
 	 * @param  {Document} previousDocument
 	 */
 	function _currentDocumentChange (evt, newCurrentDocument, previousDocument) {
+		_.forOwn(inlineWidgetsByFunctionIdentifier, function (editor) {
+			editor.close();
+		});
+		inlineWidgetsByFunctionIdentifier = {};
+
 		currentDocument = newCurrentDocument;
 
 		hostEditor = EditorManager.getCurrentFullEditor();
