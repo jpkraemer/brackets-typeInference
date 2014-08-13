@@ -451,7 +451,7 @@ define(function (require, exports, module) {
      */
     DocumentationInlineEditor.prototype._onEditorBlur = function() {
         this.docPartSpecifier = null;
-        this._closeEditor();
+        this._render();
     };
 
     /**
