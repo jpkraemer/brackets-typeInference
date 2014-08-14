@@ -288,19 +288,22 @@ define(function (require, exports, module) {
 
             for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
                 $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));
+                var pendingChange = this && this.pendingChanges && this.pendingChanges.argumentTypes && this.pendingChanges.argumentTypes[i];
+                pendingChange = _.cloneDeep(pendingChange);
+                if (pendingChange !== undefined) {
+                    pendingChange.name = "Type changed";
+                    var $pendingLine = $(TypeInformationHTMLRenderer.typeToHTML(pendingChange, true));
+                    $pendingLine.addClass('ti-alert');
+                    var $markCorrectButton = $("<a />").addClass('ti-button').text("Mark as correct"); 
+                    $markCorrectButton.on("click", this._markCorrectClickHandler.bind(this, i));
+                    $pendingLine.append($markCorrectButton);
+
+                    $line.append($pendingLine);
+                }
                 $line.data("argumentId", i);
                 $line.on("click", this._clickHandler);
                 this.$contentDiv.append($line); 
             }
-
-            var $allTypeDivs = this.$contentDiv.find(".ti-property-type");
-            setTimeout(function () {           
-                var maxWidth = _.max($allTypeDivs.map(function() {
-                    return $(this).width(); 
-                }).get());
-                //maxwidth should automatically include max-width set in css
-                $allTypeDivs.width(maxWidth);
-            }.bind(this), 1);
         }
 
         if (this.typeInformation.returnType) {
@@ -309,11 +312,39 @@ define(function (require, exports, module) {
             this.$contentDiv.append($line);
         }
 
+        var cellsToAlign = [ this.$contentDiv.find(".ti-property-type"), this.$contentDiv.find(".ti-property-name") ];
+        setTimeout(function () {
+            _.forEach(cellsToAlign, function ($cells) {
+                var maxWidth = _.max($cells.map(function() {
+                    return $(this).outerWidth(); 
+                }).get());
+                //maxwidth should automatically include max-width set in css
+                $cells.outerWidth(maxWidth);
+            });
+        }.bind(this), 1);
+
         this._displayEditorForPartOfTypeInfo();
 
        setTimeout(function () {
            this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
        }.bind(this), 1);
+   };
+
+   DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, event) {
+        if (argumentTypeId > -1) {
+            //we have an argument change
+            this.typeInformation.argumentTypes[argumentTypeId] = this.pendingChanges.argumentTypes[argumentTypeId];
+            delete this.pendingChanges.argumentTypes[argumentTypeId];
+        } else {
+            this.typeInformation.returnType = this.pendingChanges.returnType; 
+            delete this.pendingChanges.returnType;
+        }
+
+        TypeInformationStore.userUpdatedTypeInformation(this, [ this.typeInformation ], false);
+
+        event.stopPropagation();
+
+        this._render();
    };
 
     DocumentationInlineEditor.prototype._clickHandler = function(event) {
