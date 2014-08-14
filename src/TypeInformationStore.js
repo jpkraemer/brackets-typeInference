@@ -20,7 +20,6 @@ define(function (require, exports, module) {
 
 	var _ 							= require("./lib/lodash");
 	var Async						= brackets.getModule("utils/Async");
-	var DocumentationInlineEditor 	= require("./DocumentationInlineEditor");
 	var ExtensionUtils 				= brackets.getModule("utils/ExtensionUtils");
 	var JSDocTypeProvider 			= require("./JSDocTypeProvider");
 	var NodeDomain					= brackets.getModule("utils/NodeDomain");
@@ -31,7 +30,7 @@ define(function (require, exports, module) {
 
 
 	var PRIMITIVE_TYPES = [ "string", "number", "boolean", "function" ];
-	var TYPE_PROVIDERS = [ JSDocTypeProvider, TheseusTypeProvider, DocumentationInlineEditor ];
+	var TYPE_PROVIDERS = [ JSDocTypeProvider, TheseusTypeProvider, "DocumentationInlineEditor" ];
 
 	var projectRoot;
 	var projectTypeDatabaseHandle;
@@ -150,8 +149,8 @@ define(function (require, exports, module) {
 			throw "[type-inference] Never call type information store updates with something that is not an array.";
 		}
 
-		if (provider.constructor === DocumentationInlineEditor) {
-			provider = DocumentationInlineEditor;
+		if ((provider.constructor !== undefined) && (provider.constructor.name === "DocumentationInlineEditor")) {
+			provider = "DocumentationInlineEditor";
 		}
 
 		if (! _.contains(TYPE_PROVIDERS, provider)){
