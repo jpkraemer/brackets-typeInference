@@ -96,9 +96,18 @@ define(function (require, exports, module) {
 				var splitAtDot = result.type.split("."); 
 				if (splitAtDot.length === 2) {
 					result.type = splitAtDot[0];
-					result.count = Number(splitAtDot[1]);
+					var countString = splitAtDot[1];
+					var splitAtDash = countString.split("-");
+					if (splitAtDash.length === 2) {
+						result.count = {
+							min: Number(splitAtDash[0]),
+							max: Number(splitAtDash[1])
+						};
+					} else {
+						result.count = Number(countString);
+					}
 				}
-				
+
 				if (result.type === "array") {
 					result.spec = [];
 				} else if (result.type === "object") {
@@ -167,10 +176,11 @@ define(function (require, exports, module) {
 			templateValues.argumentTypes = _.map(typeInformation.argumentTypes, function (type) {
 				var result = _.pick(type, "name", "description"); 
 				result.type = _jsDocTypeStringForTypespec(type);
+				return result;
 			});
 		}
 
-		return Mustache.render(template, typeInformation, {
+		return Mustache.render(template, templateValues, {
 			param: require("text!./templates/param-jsdoc.txt"),
 			return: require("text!./templates/return-jsdoc.txt")
 		}); 
@@ -207,7 +217,12 @@ define(function (require, exports, module) {
 			}
 
 			if (type.hasOwnProperty("count")) {
-				result += "." + type.count; 
+				if (typeof type.count === "number") {
+					result += "." + type.count; 	
+				} else {
+					result += "." + type.count.min + "-" +type.count.max;
+				}
+				
 			}
 		}
 
