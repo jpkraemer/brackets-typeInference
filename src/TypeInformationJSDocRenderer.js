@@ -92,12 +92,19 @@ define(function (require, exports, module) {
 
 		switch (jsdocType.type) {
 			case "NameExpression":
-				result.type = jsdocType.name; 
+				result.type = jsdocType.name.toLowerCase(); 
 				var splitAtDot = result.type.split("."); 
 				if (splitAtDot.length === 2) {
 					result.type = splitAtDot[0];
 					result.count = Number(splitAtDot[1]);
 				}
+				
+				if (result.type === "array") {
+					result.spec = [];
+				} else if (result.type === "object") {
+					result.spec = {};
+				}
+				
 				break; 
 			case "UnionType":
 				result.type = "multiple"; 
@@ -116,8 +123,6 @@ define(function (require, exports, module) {
 				}
 				break; 
 		}
-
-		result.type = result.type.toLowerCase();
 
 		return result;
 	}

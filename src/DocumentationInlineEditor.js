@@ -230,9 +230,9 @@ define(function (require, exports, module) {
      * @param  {jQueryEvent} evt
      * @param  {TypeInformation} newDoc
      */
-    DocumentationInlineEditor.prototype._didUpdateTypeInformation = function(evt, newDoc) {
+    DocumentationInlineEditor.prototype._didUpdateTypeInformation = function(evt, newDoc, pendingChanges) {
         if (newDoc.functionIdentifier === this.functionIdentifier) {
-            this.updateTypeInformation(newDoc);
+            this.updateTypeInformation(newDoc, pendingChanges);
         }
     };
 
@@ -240,7 +240,7 @@ define(function (require, exports, module) {
      * Update display with new type information that came in externally
      * @param  {TypeInformation} typeInformation
      */
-    DocumentationInlineEditor.prototype.updateTypeInformation = function (typeInformation) {
+    DocumentationInlineEditor.prototype.updateTypeInformation = function (typeInformation, pendingChanges) {
         if (this.functionIdentifier !== typeInformation.functionIdentifier) {
             TIUtils.log("Inline widget for functionIdentifier "  + 
                 this.functionIdentifier + 
@@ -249,10 +249,21 @@ define(function (require, exports, module) {
                 ". Aborting update!");
         }
 
+        var needsRerender = false; 
         if (! _.isEqual(this.typeInformation, typeInformation)) { 
             this.typeInformation = typeInformation;
-            this._render();  
+            needsRerender = true; 
         }
+
+        if (pendingChanges !== undefined) {
+            this.pendingChanges = pendingChanges; 
+            needsRerender = true; 
+        }
+
+        if (needsRerender) {
+            this._render();
+        }
+
     };
 
     /**
@@ -340,7 +351,7 @@ define(function (require, exports, module) {
                 this.typeInformation.returnType = typeInformationUpdate.returnType; 
             }
 
-            TypeInformationStore.userUpdatedTypeInformation([ this.typeInformation ], false);
+            TypeInformationStore.userUpdatedTypeInformation(this, [ this.typeInformation ], false);
 
             this.inlineEditor = null;
         }

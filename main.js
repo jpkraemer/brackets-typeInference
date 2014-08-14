@@ -27,6 +27,10 @@ define(function (require, exports, module) {
 		ExtensionUtils.loadStyleSheet(module, "main.less");
 
 		TypeInformationStore.init();
+		TypeInformationStore.setOptions({
+			mergeAutomaticUpdatesConservatively: true
+		});
+
 		TheseusTypeProvider.init();
 		JSDocTypeProvider.init();
 		FunctionTracker.init();

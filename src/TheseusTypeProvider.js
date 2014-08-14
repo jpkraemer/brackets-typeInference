@@ -82,7 +82,7 @@ define(function (require, exports, module) {
 					resultsToPassOn.push(resultToPassOn); 
     			}
     			
-    			$(exports).trigger("didReceiveTypeInformation", [ resultsToPassOn ], true); 
+    			$(exports).trigger("didReceiveTypeInformation", [ exports, resultsToPassOn, true ]); 
     		}
     	};
 

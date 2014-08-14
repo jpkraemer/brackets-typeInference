@@ -30,11 +30,16 @@ define(function (require, exports, module) {
 	var TIUtils 					= require("./TIUtils");
 
 
-	var PRIMITIVE_TYPES = ["string", "number", "boolean", "function"];
+	var PRIMITIVE_TYPES = [ "string", "number", "boolean", "function" ];
+	var TYPE_PROVIDERS = [ JSDocTypeProvider, TheseusTypeProvider, DocumentationInlineEditor ];
 
 	var projectRoot;
 	var projectTypeDatabaseHandle;
 	var queue;
+
+	var options = {
+		mergeAutomaticUpdatesConservatively: false
+	};
 
 	function _init () {
 
@@ -46,6 +51,10 @@ define(function (require, exports, module) {
 		//register for updates from providers
 		$(TheseusTypeProvider).on("didReceiveTypeInformation", _didReceiveTypeInformation); 
 		$(JSDocTypeProvider).on("didReceiveTypeInformation", _didReceiveTypeInformation); 
+	}
+
+	function setOptions (newOptions) {
+		_.merge(options, newOptions);
 	}
 
 	function _executeDatabaseCommand () {
@@ -122,28 +131,37 @@ define(function (require, exports, module) {
 		});
 	}
 
-	function userUpdatedTypeInformation (results, isMerge) {
-		_didReceiveTypeInformation(null, results, isMerge);
+	function userUpdatedTypeInformation (provider, results, isMerge) {
+		_didReceiveTypeInformation(null, provider, results, isMerge);
 	}
 
 	/**
 	 * Callback fired by Type providers. 
 	 * @param  {Event} event
+	 * @param  {Object} provider the type provider triggering the update
 	 * @param  {[Type Information records]} results
-	 * @param {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
+	 * @param  {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
 	 * if false the existing record will be overwritten.
 	 */
-	function _didReceiveTypeInformation (event, results, isMerge) {
+	function _didReceiveTypeInformation (event, provider, results, isMerge) {
 		var i, j;
 
 		if (!Array.isArray(results)) {
 			throw "[type-inference] Never call type information store updates with something that is not an array.";
 		}
 
+		if (provider.constructor === DocumentationInlineEditor) {
+			provider = DocumentationInlineEditor;
+		}
+
+		if (! _.contains(TYPE_PROVIDERS, provider)){
+			throw "[type-inference] Update with invalid type provider";
+		}
+
 		results = _.groupBy(results, "functionIdentifier");
 
 		_.forOwn(results, function (num, functionIdentifier) {
-			var resultsForFunctionIdentifier = results[functionIdentifier];
+			var resultsForFunctionIdentifier = results[functionIdentifier];	
 			//if there is more then one result per function identifier, we premerge these. Only happens for live data providers, of course.
 			var argumentTypeArrays = _.pluck(resultsForFunctionIdentifier, "argumentTypes");
 
@@ -163,8 +181,7 @@ define(function (require, exports, module) {
 			var mergedTypeInformation = _.last(resultsForFunctionIdentifier); 
 			mergedTypeInformation.argumentTypes = aggregateTypes;
 			
-			_updateWithTypeInformation(mergedTypeInformation, isMerge);
-			// _updateTypeForFunctionWithTypesAndArguments(functionIdentifier, aggregateTypes, resultsForNodeId[resultsForNodeId.length - 1].arguments);	
+			_updateWithTypeInformation(provider, mergedTypeInformation, isMerge);
 		});
 	}
 
@@ -174,7 +191,7 @@ define(function (require, exports, module) {
 	 * @param {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
 	 * if false the existing record will be overwritten.
 	 */
-	function _updateWithTypeInformation (typeInformation, isMerge) {
+	function _updateWithTypeInformation (provider, typeInformation, isMerge) {
 
 		var successHandler = function (newDocs) {
 			TIUtils.log("Successfully update type information: " + newDocs);
@@ -184,13 +201,137 @@ define(function (require, exports, module) {
 			TIUtils.log("Error updating type information: " + err);
 		};
 
+		var overwriteMergePolicy = function (oldDoc, newDoc) {
+			var result = {
+				propertiesToUpdate: {},
+				propertiesToRemove: {}
+			};
+
+			_.union(_.keys(newDoc), _.keys(oldDoc)).forEach(function(key) {
+				//don't change the db-internal id
+				if (key === "_id") {
+					return;
+				}
+
+				if (newDoc[key] !== undefined) {
+					result.propertiesToUpdate[key] = newDoc[key];
+				} else {
+					result.propertiesToRemove[key] = true;
+					oldDoc[key] = undefined;
+				}
+			}); 
+
+			return result;
+		};
+
+		var generalizingMergePolicy = function (oldDoc, newDoc) {
+			var result = {
+				propertiesToUpdate: {},
+				propertiesToRemove: {}
+			};
+
+			if (newDoc.argumentTypes !== undefined) {
+				var newTypes = newDoc.argumentTypes;
+
+				var typesDidChange = false;
+
+				if ((oldDoc.argumentTypes !== undefined) && (oldDoc.argumentTypes.length === newDoc.argumentTypes.length)) {
+					for (var i = 0; i < newDoc.argumentTypes.length; i++) {
+						newTypes[i] = _mergeTypeSpecs(newDoc.argumentTypes[i], oldDoc.argumentTypes[i]); 
+						typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], oldDoc.argumentTypes[i]));
+					}
+				} else {
+					//either length changed or type info was just added
+					typesDidChange = true;
+				}
+
+				if (typesDidChange) {
+					result.propertiesToUpdate.argumentTypes = newTypes;	
+				}
+			} 
+
+			if (newDoc.returnType !== undefined) {
+				var newType = newDoc.returnType; 
+				if (oldDoc.returnType !== undefined) {
+					newType = _mergeTypeSpecs(newDoc.returnType, oldDoc.returnType);
+					if (! _.isEqual(newType, oldDoc.returnType)) {
+						result.propertiesToUpdate.returnType = newType;
+					}
+				} else {
+					result.propertiesToUpdate.returnType = newType;
+				}
+			}
+
+			_(newDoc).omit("argumentTypes", "returnType").forOwn(function(value, key) {
+				if (oldDoc[key] !== newDoc[key]) {
+					result.propertiesToUpdate[key] = newDoc[key];
+				}
+			});
+
+			return result;
+		};
+
+		var conservativeMergePolicy = function (oldDoc, newDoc) {
+			var comparatorIgnoringCount = function (a, b) {
+				if (_.contains(PRIMITIVE_TYPES, a.type) && _.contains(PRIMITIVE_TYPES, b.type)) {
+					return _.isEqual(_.omit(a, "count"), _.omit(b, "count"));
+				}
+
+				return undefined;
+			};
+
+			var result = {
+				propertiesToUpdate: {},
+				propertiesToRemove: {},
+				original: _.cloneDeep(oldDoc),
+				pendingChanges: {}
+			};
+
+			var generalizedResult = generalizingMergePolicy(oldDoc, newDoc);
+			result.propertiesToUpdate = generalizedResult.propertiesToUpdate; 
+			result.propertiesToRemove = generalizedResult.propertiesToRemove;
+
+			if ((result.propertiesToUpdate.argumentTypes !== undefined) && (result.original.argumentTypes !== undefined)) {
+				result.pendingChanges.argumentTypes = [];
+
+				for (var i = 0; i < result.original.argumentTypes.length; i++) {
+					var originalType = result.original.argumentTypes[i]; 
+					var newType = result.propertiesToUpdate.argumentTypes[i];
+
+					var isEqual = _.isEqual(newType, originalType, comparatorIgnoringCount);
+
+					if (! isEqual) {
+						result.pendingChanges.argumentTypes[i] = newType;
+					}
+				}
+
+				if (result.pendingChanges.argumentTypes.length !== 0) {
+					delete result.propertiesToUpdate.argumentTypes; 
+				}
+			} else if ((result.propertiesToRemove.argumentTypes) && (result.original.argumentTypes !== undefined)) {
+				result.pendingChanges.argumentTypes = true;
+				delete result.propertiesToRemove.argumentTypes;
+			}
+
+			if ((result.propertiesToUpdate.returnType !== undefined) && (result.original.returnType !== undefined)) {
+				if (! _.isEqual(result.propertiesToUpdate.returnType, result.original.returnType, comparatorIgnoringCount)) {
+					result.pendingChanges.returnType = result.propertiesToUpdate.returnType;
+					delete result.propertiesToUpdate.returnType;
+				}
+			} else if ((result.propertiesToRemove.returnType) && (result.original.returnType !== undefined)) {
+				result.pendingChanges.returnType = true;
+				delete result.propertiesToRemove.returnType;
+			}
+
+			return result;
+		};
+
 		_executeDatabaseCommand("find", 
 			{ functionIdentifier: typeInformation.functionIdentifier }
 		).done(function (docs) {
 			var isUpdate = false;
 			var doc;
-			var propertiesToUpdate = {};
-			var propertiesToRemove = {};
+			var changes;
 			var typesDidChange; 
 			
 			if (docs.length > 0) {
@@ -198,84 +339,32 @@ define(function (require, exports, module) {
 				doc = docs[0];
 			} else {
 				isUpdate = false;
+			}
+
+			if (! isUpdate) {
 				doc = typeInformation;
-			}
-
-			if ((! isMerge) && isUpdate) {
-				_.union(_.keys(typeInformation), _.keys(doc)).forEach(function(key) {
-					//don't change the db-internal id
-					if (key === "_id") {
-						return;
-					}
-
-					if (typeInformation[key] !== undefined) {
-						propertiesToUpdate[key] = typeInformation[key];
-					} else {
-						propertiesToRemove[key] = true;
-						doc[key] = undefined;
-					}
-				}); 
+				changes.propertiesToUpdate = doc;
+				changes.propertiesToRemove = {};
+			} else if (! isMerge) {
+				changes = overwriteMergePolicy(doc, typeInformation); 
+			} else if (options.mergeAutomaticUpdatesConservatively && (provider === TheseusTypeProvider)) {
+				changes = conservativeMergePolicy(doc, typeInformation);
 			} else {
-				if (typeInformation.argumentTypes !== undefined) {
-					var newTypes = typeInformation.argumentTypes;
-				
-					//types always changed if the record is new
-					typesDidChange = !isUpdate; 
-
-					if (isUpdate) {
-						if ((doc.argumentTypes !== undefined) && (doc.argumentTypes.length === typeInformation.argumentTypes.length)) {
-							for (var i = 0; i < typeInformation.argumentTypes.length; i++) {
-								newTypes[i] = _mergeTypeSpecs(typeInformation.argumentTypes[i], doc.argumentTypes[i]); 
-								typesDidChange = typesDidChange || (! _.isEqual(newTypes[i], doc.argumentTypes[i]));
-							}
-						} else {
-							//either length changed or type info was just added
-							typesDidChange = true;
-						}
-					} 
-
-					if (typesDidChange) {
-						propertiesToUpdate.argumentTypes = newTypes;	
-					}
-				} 
-
-				if (typeInformation.returnType !== undefined) {
-					var newType = typeInformation.returnType; 
-					typesDidChange = !isUpdate; 
-					if (isUpdate) {
-						if (doc.returnType !== undefined) {
-							newType = _mergeTypeSpecs(typeInformation.returnType, doc.returnType);
-							typesDidChange = typesDidChange || (! _.isEqual(newType, doc.returnType));
-						} else {
-							typesDidChange = true; 
-						}
-					}
-
-					if (typesDidChange) {
-						propertiesToUpdate.returnType = newType;
-					}
-				}
-
-				_(typeInformation).omit("argumentTypes", "returnType").forOwn(function(value, key) {
-					if (doc[key] !== typeInformation[key]) {
-						propertiesToUpdate[key] = typeInformation[key];
-						typesDidChange = true;
-					}
-				});
+				changes = generalizingMergePolicy(doc, typeInformation);
 			}
 
-			_.merge(doc, propertiesToUpdate);
+			_.merge(doc, changes.propertiesToUpdate);
 
-			if ((_.size(propertiesToUpdate) + _.size(propertiesToRemove)) > 0) {
+			if ((_.size(changes.propertiesToUpdate) + _.size(changes.propertiesToRemove)) > 0) {
 				_executeDatabaseCommand("update",  
 						{ functionIdentifier: typeInformation.functionIdentifier }, 
-						{ $set: propertiesToUpdate, $unset: propertiesToRemove },
+						{ $set: changes.propertiesToUpdate, $unset: changes.propertiesToRemove },
 						{ upsert: true }
 					).done(function  (updateInfo) {
 						if (updateInfo.newDoc !== undefined) {
-							$(exports).trigger("didUpdateTypeInformation", [updateInfo.newDoc]); 	
+							$(exports).trigger("didUpdateTypeInformation", [ updateInfo.newDoc ]);
 						} else {
-							$(exports).trigger("didUpdateTypeInformation", [doc]); 
+							$(exports).trigger("didUpdateTypeInformation", [ doc, changes.pendingChanges ]); 
 						}
 					}).fail(errorHandler);
 			}
@@ -567,11 +656,12 @@ define(function (require, exports, module) {
 	}
 
 	exports.init = _init;
-	exports.mergeTypeSpecs = _mergeTypeSpecs;
-	exports.forTests = {};
-	exports.forTests.mergeCounts = _mergeCounts;
+	exports.setOptions = setOptions;
+	exports.mergeTypeSpecs = _mergeTypeSpecs; 
 	exports.typeInformationForFunctionIdentifer = typeInformationForFunctionIdentifer;
 	exports.functionIdentifiersForFile = functionIdentifiersForFile;
 	exports.userUpdatedTypeInformation = userUpdatedTypeInformation; 
 	exports.PRIMITIVE_TYPES = PRIMITIVE_TYPES;
+	exports.forTests = {};
+	exports.forTests.mergeCounts = _mergeCounts;
 });

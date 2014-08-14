@@ -94,7 +94,7 @@
 			CommandManager.execute(Commands.FILE_SAVE, document);
 		}
 
-		$(exports).trigger("didReceiveTypeInformation", [ results ], false);
+		$(exports).trigger("didReceiveTypeInformation", [ exports, results, false ]);
 	}
 
 	/**
@@ -110,7 +110,7 @@
 			results.push(typeInformation);
 		});
 		
-		$(exports).trigger("didReceiveTypeInformation", [ results ], false); 
+		$(exports).trigger("didReceiveTypeInformation", [ exports, results, false ]); 
 	}
 
 	/**
