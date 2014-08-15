@@ -201,6 +201,20 @@ define(function (require, exports, module) {
 		};
 
 		var overwriteMergePolicy = function (oldDoc, newDoc) {
+			var betterIsEqual = function (a,b) {
+				if ((typeof a === "object") && (typeof b === "object")) {
+					var allKeys = _.union(_.keys(a), _.keys(b));
+					var defaults = _.reduce(allKeys, function (result, key) {
+						result[key] = undefined;
+						return result;
+					}, {});
+					_.defaults(a, defaults);
+					_.defaults(b, defaults);
+				}
+
+				return _.isEqual(a, b);
+			};
+
 			var result = {
 				propertiesToUpdate: {},
 				propertiesToRemove: {}
@@ -213,10 +227,18 @@ define(function (require, exports, module) {
 				}
 
 				if (newDoc[key] !== undefined) {
-					result.propertiesToUpdate[key] = newDoc[key];
+					var needsUpdate = true;
+					if (oldDoc[key] !== undefined) {
+						needsUpdate = ! betterIsEqual(newDoc[key], oldDoc[key]);
+					}
+					if (needsUpdate) {
+						result.propertiesToUpdate[key] = newDoc[key];
+					}
 				} else {
-					result.propertiesToRemove[key] = true;
-					oldDoc[key] = undefined;
+					if (key !== "lastArguments") {
+						result.propertiesToRemove[key] = true;
+						oldDoc[key] = undefined;
+					}
 				}
 			}); 
 
