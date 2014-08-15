@@ -10,13 +10,19 @@ define(function (require, exports, module) {
 	"use strict"; 
 
 	var _ 				= require("./lib/lodash");
-	var Agent 			= require("./theseus/Agent"); 
-	var AgentManager 	= require("./theseus/AgentManager");
+	var ExtensionLoader = brackets.getModule("utils/ExtensionLoader");
+	var Agent;
+	var AgentManager; 
+	// var AgentManager 	= require("./theseus/AgentManager");
+	// var AgentManager	= require("../theseus/src/AgentManager");
 
 	var _tracedFunctions = [];
 	var _logHandles = [];
 
 	function init () {
+		Agent 			= ExtensionLoader.getRequireContextForExtension("theseus")("./src/Agent");
+		AgentManager 	= ExtensionLoader.getRequireContextForExtension("theseus")("./src/AgentManager");
+
 		Agent.init(); 
 		AgentManager.init();
 
