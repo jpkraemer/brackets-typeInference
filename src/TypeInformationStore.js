@@ -352,7 +352,7 @@ define(function (require, exports, module) {
 		).done(function (docs) {
 			var isUpdate = false;
 			var doc;
-			var changes;
+			var changes = {};
 			var typesDidChange; 
 			
 			if (docs.length > 0) {

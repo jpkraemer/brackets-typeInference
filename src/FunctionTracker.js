@@ -240,7 +240,7 @@ define(function (require, exports, module) {
 				locationInfo.commentRange.start 	= locationInfo.commentBookmarks.start.find();
 				locationInfo.commentRange.end 	= locationInfo.commentBookmarks.end.find();
 				locationInfo.functionRange.start = locationInfo.functionBookmarks.start.find();
-				locationInfo.commentRange.end 	= locationInfo.functionBookmarks.end.find();
+				locationInfo.functionRange.end 	= locationInfo.functionBookmarks.end.find();
 			});
 		}		
 
