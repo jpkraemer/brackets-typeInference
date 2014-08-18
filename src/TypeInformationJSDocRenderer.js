@@ -143,7 +143,7 @@ define(function (require, exports, module) {
 	 */
 	function typeSpecToJSDoc(type, isArgument) {
 		var templateValues = {
-			type: _jsDocTypeStringForTypespec(type),
+			type: typeSpecToJSDocTypeString(type),
 			description: type.description
 		};
 
@@ -167,7 +167,7 @@ define(function (require, exports, module) {
 
 		if (typeInformation.returnType !== undefined) {
 			templateValues.returnType = {
-				type: _jsDocTypeStringForTypespec(typeInformation.returnType), 
+				type: typeSpecToJSDocTypeString(typeInformation.returnType), 
 				description: typeInformation.returnType.description
 			};
 		}
@@ -175,7 +175,7 @@ define(function (require, exports, module) {
 		if (typeInformation.argumentTypes !== undefined) {
 			templateValues.argumentTypes = _.map(typeInformation.argumentTypes, function (type) {
 				var result = _.pick(type, "name", "description"); 
-				result.type = _jsDocTypeStringForTypespec(type);
+				result.type = typeSpecToJSDocTypeString(type);
 				return result;
 			});
 		}
@@ -191,18 +191,18 @@ define(function (require, exports, module) {
 	 * @param  {Typespec} type
 	 * @return {String}
 	 */
-	function _jsDocTypeStringForTypespec (type) {
+	function typeSpecToJSDocTypeString (type) {
 		var result = ""; 
 
 		if (type !== undefined) {
 			switch (type.type) {
 				case "array": 
-					result = "[" + _.map(type.spec, _jsDocTypeStringForTypespec).join(', ') + "]";
+					result = "[" + _.map(type.spec, typeSpecToJSDocTypeString).join(', ') + "]";
 					break;
 				case "object":
 					result = "{ "; 
 					result +=  _.chain(type.spec)
-									.mapValues(_jsDocTypeStringForTypespec)
+									.mapValues(typeSpecToJSDocTypeString)
 									.pairs()
 									.map(function (pair) { return pair.join(": "); })
 									.value()
@@ -234,6 +234,7 @@ define(function (require, exports, module) {
 	}
 
 	exports.typeSpecToJSDoc = typeSpecToJSDoc;
+	exports.typeSpecToJSDocTypeString = typeSpecToJSDocTypeString;
 	exports.typeInformationToJSDoc = typeInformationToJSDoc; 
 	exports.functionIdentifierToJSDoc = functionIdentifierToJSDoc;
 	exports.updateTypeInformationWithJSDoc = updateTypeInformationWithJSDoc;

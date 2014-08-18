@@ -97,6 +97,40 @@ define(function (require, exports, module) {
 	}
 
 	/**
+	 * Returns a promise that resolves with the type information records found for the given function namen and file
+	 * @param {string} functionName 
+	 * @param {string} fullPath 
+	 * @returns {TypeInformation (Promise)}
+	 */
+	function typeInformationForFunctionNameInFile (functionName, fullPath) {
+		var result = $.Deferred(); 
+
+		functionIdentifiersForFile(fullPath).done(function (docs) {
+			var functionIdentifier = _.find(docs, function (aFunctionIdentifier) {
+				var components = aFunctionIdentifier.split("-"); 
+				return (components[components.length - 2] === functionName); 
+			}); 
+
+			if (functionIdentifier === undefined) {
+				result.resolve(undefined); 
+			} else {
+				_executeDatabaseCommand("find",
+					{ functionIdentifier: functionIdentifier }
+				).done(function (docs) {
+					result.resolve(docs); 
+				}).fail(function (err) {
+					TIUtils.log("Error retrieving type information for function name " + functionName + " in file " + fullPath + ": " + err);
+					result.reject(err);
+				});
+			}
+		}).fail(function (err) {
+			result.reject(err);
+		});
+
+		return result.promise();
+	}
+
+	/**
 	 * Returns a promise that resolves to the list of function identifiers in the given file
 	 * @param {string} file 
 	 * @return {[string]} Array of function identifiers
@@ -680,6 +714,7 @@ define(function (require, exports, module) {
 	exports.setOptions = setOptions;
 	exports.mergeTypeSpecs = _mergeTypeSpecs; 
 	exports.typeInformationForFunctionIdentifer = typeInformationForFunctionIdentifer;
+	exports.typeInformationForFunctionNameInFile = typeInformationForFunctionNameInFile;
 	exports.functionIdentifiersForFile = functionIdentifiersForFile;
 	exports.userUpdatedTypeInformation = userUpdatedTypeInformation; 
 	exports.PRIMITIVE_TYPES = PRIMITIVE_TYPES;

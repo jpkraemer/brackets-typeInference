@@ -12,7 +12,7 @@ define(function (require, exports, module) {
 		var templateValues = {
 			isArgument: isArgument,
 			name: type.name,
-			type: _typeSpecToHTML(type)
+			type: typeSpecToHTML(type)
 		};
 
 		if (type.description !== undefined) {
@@ -31,17 +31,17 @@ define(function (require, exports, module) {
 		return marked(string); 
 	}
 
-	function _typeSpecToHTML (type) {
+	function typeSpecToHTML (type) {
 		var result; 
 
 		switch (type.type) {
 			case "array": 
-				result = "[" + _.map(type.spec, _typeSpecToHTML).join(', ') + "]";
+				result = "[" + _.map(type.spec, typeSpecToHTML).join(', ') + "]";
 				break;
 			case "object": 
 				result = "{ "; 
 				result +=  _.chain(type.spec)
-								.mapValues(_typeSpecToHTML)
+								.mapValues(typeSpecToHTML)
 								.pairs()
 								.map(function (pair) { return pair.join(": "); })
 								.value()
@@ -75,6 +75,7 @@ define(function (require, exports, module) {
 	}
 
 	exports.typeToHTML = typeToHTML;
+	exports.typeSpecToHTML = typeSpecToHTML;
 	exports.markdownStringToHTML = markdownStringToHTML; 
 
 });
