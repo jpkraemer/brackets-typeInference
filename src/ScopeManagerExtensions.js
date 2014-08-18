@@ -6,76 +6,70 @@ define(function (require, exports, module) {
 
 	var _ 								= require("./lib/lodash");
 	var ExtensionLoader 				= brackets.getModule("utils/ExtensionLoader");
-	var HintUtils2;
-	var ScopeManger; 
-	var ParameterHintManager; 
 	var TypeInformationHTMLRenderer 	= require("./TypeInformationHTMLRenderer");
 	var TypeInformationStore 			= require("./TypeInformationStore");
 
 	function init () {
-		HintUtils2				= ExtensionLoader.getRequireContextForExtension("JavaScriptCodeHints")("HintUtils2");
-		ScopeManger 			= ExtensionLoader.getRequireContextForExtension("JavaScriptCodeHints")("ScopeManager");
-		ParameterHintManager 	= ExtensionLoader.getRequireContextForExtension("JavaScriptCodeHints")("ParameterHintManager");
+		ExtensionLoader.getRequireContextForExtension("JavaScriptCodeHints")([ "ScopeManager" ], function (ScopeManager) {
+			var oldParameterHint = ScopeManager.requestParameterHint; 
+			ScopeManager.requestParameterHint = function (session, functionOffset) {
+				var result = $.Deferred();
+				var sharedSession = session;
 
-		var sharedSession;
+				var document = session.editor.document; 
+				var fullPath = document.file.fullPath; 
+				//we need to find the function name for the function call 
+				var sourceCode = document.getRange({ line: 0, ch: 0 }, functionOffset); 
+				var functionName = _.last(sourceCode.split(/\s|^/m)); 
 
-		var oldParameterHint = ScopeManger.requestParameterHint; 
-		ScopeManger.requestParameterHint = function (session, functionOffset) {
-			var result = $.Deferred();
-			var sharedSession = session;
+				TypeInformationStore.typeInformationForFunctionNameInFile(functionName, fullPath).done(function (docs) {
+					if (docs.length > 0) {
+					// if (false) {
+						var typeInformation = docs[0];
 
-			var document = session.editor.document; 
-			var fullPath = document.file.fullPath; 
-			//we need to find the function name for the function call 
-			var sourceCode = document.getRange({ line: 0, ch: 0 }, functionOffset); 
-			var functionName = _.last(sourceCode.split(/\s|^/m)); 
+						var resultArray = _.map(typeInformation.argumentTypes, function (type) {
+							var typeString = TypeInformationHTMLRenderer.typeSpecToHTML(type); 
+							typeString = typeString.replace(/<.*?>/g, "");
 
-			TypeInformationStore.typeInformationForFunctionNameInFile(functionName, fullPath).done(function (docs) {
-				if (docs.length > 0) {
-				// if (false) {
-					var typeInformation = docs[0];
+							return {
+								name: type.name,
+								type: typeString
+							};
+						}); 
 
-					var resultArray = _.map(typeInformation.argumentTypes, function (type) {
-						var typeString = TypeInformationHTMLRenderer.typeSpecToHTML(type); 
-						typeString = typeString.replace(/<.*?>/g, "");
+						//this marker will allow us to customize rendering 
+						resultArray.providedByTypeInference = true;
 
-						return {
-							name: type.name,
-							type: typeString
-						};
-					}); 
+						// we need to do some session configuration here, just resolving the promise is not enough
+						var offset; 
+						if (functionOffset !== undefined) {
+				            offset = {line: functionOffset.line, ch: functionOffset.ch};
+				        } else {
+				            offset = session.getCursor();
+				        }
+				        session.setFunctionCallPos(offset);
+						session.setFnType(resultArray);
 
-					//this marker will allow us to customize rendering 
-					resultArray.providedByTypeInference = true;
-
-					// we need to do some session configuration here, just resolving the promise is not enough
-					var offset; 
-					if (functionOffset !== undefined) {
-			            offset = {line: functionOffset.line, ch: functionOffset.ch};
-			        } else {
-			            offset = session.getCursor();
-			        }
-			        session.setFunctionCallPos(offset);
-					session.setFnType(resultArray);
-
-					result.resolveWith(null, [ resultArray ]);
-				} else {
+						result.resolveWith(null, [ resultArray ]);
+					} else {
+						oldParameterHint(session, functionOffset).done(function () {
+							result.resolveWith(this, arguments);
+						}).fail(function () {
+							result.reject(arguments);
+						});
+					}
+				}).fail(function (err) {
 					oldParameterHint(session, functionOffset).done(function () {
 						result.resolveWith(this, arguments);
 					}).fail(function () {
 						result.reject(arguments);
 					});
-				}
-			}).fail(function (err) {
-				oldParameterHint(session, functionOffset).done(function () {
-					result.resolveWith(this, arguments);
-				}).fail(function () {
-					result.reject(arguments);
-				});
-			}); 
+				}); 
 
-			return result.promise(); 
-		}; 
+				return result.promise(); 
+			}; 
+		});
+
 
 	}
 
