@@ -271,6 +271,21 @@ define(function (require, exports, module) {
      */
      DocumentationInlineEditor.prototype._render = function() {
         var $line;
+        var pendingChange; 
+
+        var insertPendingChange = function (pendingChange, $line, argumentTypeId) {
+            pendingChange = _.cloneDeep(pendingChange);
+            if (pendingChange !== undefined) {
+                pendingChange.name = "Type changed";
+                var $pendingLine = $(TypeInformationHTMLRenderer.typeToHTML(pendingChange, true));
+                $pendingLine.addClass('ti-alert');
+                var $markCorrectButton = $("<a />").addClass('ti-button').text("Mark as correct"); 
+                $markCorrectButton.on("click", this._markCorrectClickHandler.bind(this, argumentTypeId));
+                $pendingLine.append($markCorrectButton);
+
+                $line.append($pendingLine);
+            }
+        }.bind(this);
 
         this._closeEditor();
         this.$contentDiv.empty();
@@ -288,18 +303,8 @@ define(function (require, exports, module) {
 
             for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
                 $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));
-                var pendingChange = this && this.pendingChanges && this.pendingChanges.argumentTypes && this.pendingChanges.argumentTypes[i];
-                pendingChange = _.cloneDeep(pendingChange);
-                if (pendingChange !== undefined) {
-                    pendingChange.name = "Type changed";
-                    var $pendingLine = $(TypeInformationHTMLRenderer.typeToHTML(pendingChange, true));
-                    $pendingLine.addClass('ti-alert');
-                    var $markCorrectButton = $("<a />").addClass('ti-button').text("Mark as correct"); 
-                    $markCorrectButton.on("click", this._markCorrectClickHandler.bind(this, i));
-                    $pendingLine.append($markCorrectButton);
-
-                    $line.append($pendingLine);
-                }
+                pendingChange = this && this.pendingChanges && this.pendingChanges.argumentTypes && this.pendingChanges.argumentTypes[i];
+                insertPendingChange(pendingChange, $line, i);
                 $line.data("argumentId", i);
                 $line.on("click", this._clickHandler);
                 this.$contentDiv.append($line); 
@@ -308,6 +313,10 @@ define(function (require, exports, module) {
 
         if (this.typeInformation.returnType) {
             $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.returnType, false));
+            $line.addClass('ti-return');
+            pendingChange = this && this.pendingChanges && this.pendingChanges.returnType;
+            insertPendingChange(pendingChange, $line, undefined);
+
             $line.on("click", this._clickHandler);
             this.$contentDiv.append($line);
         }
