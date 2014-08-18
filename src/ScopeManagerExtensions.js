@@ -69,8 +69,6 @@ define(function (require, exports, module) {
 				return result.promise(); 
 			}; 
 		});
-
-
 	}
 
 	exports.init = init;
