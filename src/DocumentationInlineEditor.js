@@ -410,10 +410,9 @@ define(function (require, exports, module) {
             var $wrapper = $(this.inlineEditor.getWrapperElement()).parent(); 
             if ($wrapper.hasClass('ti-description')) {
                 this.typeInformation.description = typeInformationUpdate.description;
-            } else if ($wrapper.hasClass('ti-property')) {
-                this.typeInformation.argumentTypes = typeInformationUpdate.argumentTypes;
-                this.typeInformation.returnType = typeInformationUpdate.returnType; 
             }
+            this.typeInformation.argumentTypes = typeInformationUpdate.argumentTypes;
+            this.typeInformation.returnType = typeInformationUpdate.returnType; 
 
             TypeInformationStore.userUpdatedTypeInformation(this, [ this.typeInformation ], false);
 
