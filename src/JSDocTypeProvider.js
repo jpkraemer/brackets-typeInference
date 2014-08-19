@@ -68,7 +68,9 @@
 		//the type information store from here
 		var results = []; 
 
-		for (var i = 0; i < unindexedFunctions.length; i++) {
+		_.sortBy(unindexedFunctions, function (functionInfo) { return functionInfo.functionRange.start.line; });
+
+		for (var i = unindexedFunctions.length - 1; i >= 0; i--) {
 			var functionInfo = unindexedFunctions[i]; 
 			var functionName = functionInfo.functionName || "anonymous";
 			var typeInformation = {
@@ -84,7 +86,7 @@
 					document.replaceRange(commentInset + functionIdentifierJSDoc, { line: functionInfo.commentRange.end.line, ch: 0 });
 				}
 			} else {
-				var newCommentText = "\n" + commentInset + "/**\n" + commentInset + functionIdentifierJSDoc + commentInset + " */";
+				var newCommentText = "\n" + commentInset + "/**\n" + commentInset + functionIdentifierJSDoc + commentInset + " */\n";
 				document.replaceRange(newCommentText, functionInfo.functionRange.start);
 			}
 			results.push(typeInformation);

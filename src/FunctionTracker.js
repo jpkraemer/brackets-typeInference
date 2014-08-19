@@ -192,34 +192,36 @@ define(function (require, exports, module) {
 			parseAst(ast, { type: "FunctionDeclaration" }, function (node) {
 				var functionInfo;
 
+				var functionName; 
+				if (node.id !== undefined) {
+					functionName = node.id.name;
+				}
+
+				functionInfo = {
+					functionRange: esprimaLocationToRange(node.loc),
+					functionName: functionName
+				};
+
+				functionInfo.functionBookmarks = {
+					start: referencedEditor._codeMirror.setBookmark(functionInfo.functionRange.start),
+					end: referencedEditor._codeMirror.setBookmark(functionInfo.functionRange.end)
+				};
+
 				if (node.leadingComments !== undefined) {
 					//try to find a unique function identifer
 					for (var i = 0; i < node.leadingComments.length; i++) {
 						var commentNode = node.leadingComments[i];
 						if (commentNode.type === "Block") {
-							var functionName; 
-							if (node.id !== undefined) {
-								functionName = node.id.name;
-							}
+							functionInfo.commentRange = esprimaLocationToRange(commentNode.loc);
 
-							functionInfo = {
-								commentRange: esprimaLocationToRange(commentNode.loc),
-								functionRange: esprimaLocationToRange(node.loc),
-								functionName: functionName
+							functionInfo.commentBookmarks = {
+								start: referencedEditor._codeMirror.setBookmark(functionInfo.commentRange.start),
+								end: referencedEditor._codeMirror.setBookmark(functionInfo.commentRange.end)
 							};
+
 							var match = commentNode.value.match(/^\s*\*\s*@uniqueFunctionIdentifier (\S*)/m);
 							if (match) {
 								var functionIdentifier = match[1];
-								functionInfo.commentBookmarks = {
-									start: referencedEditor._codeMirror.setBookmark(functionInfo.commentRange.start),
-									end: referencedEditor._codeMirror.setBookmark(functionInfo.commentRange.end)
-								};
-
-								functionInfo.functionBookmarks = {
-									start: referencedEditor._codeMirror.setBookmark(functionInfo.functionRange.start),
-									end: referencedEditor._codeMirror.setBookmark(functionInfo.functionRange.end)
-								};
-
 								trackedFunctions[functionIdentifier] = functionInfo;
 								break;
 							} else {
@@ -228,9 +230,6 @@ define(function (require, exports, module) {
 						}
 					}
 				} else {
-					functionInfo = {
-						functionRange: esprimaLocationToRange(node.loc)
-					};
 					untrackedFunctions.push(functionInfo);
 				}
 			});
