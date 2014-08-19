@@ -70,7 +70,7 @@
 
 		for (var i = 0; i < unindexedFunctions.length; i++) {
 			var functionInfo = unindexedFunctions[i]; 
-			var functionName = functionInfo.name || "anonymous";
+			var functionName = functionInfo.functionName || "anonymous";
 			var typeInformation = {
 				functionIdentifier: document.file.fullPath + "-function-" + functionName + "-" + Math.random().toString(36).substr(2,5),
 				file: document.file.fullPath
