@@ -366,7 +366,7 @@ define(function (require, exports, module) {
 
    DocumentationInlineEditor.prototype._showCallLocationClickHandler = function(argumentTypeId, event) {
         TheseusTypeProvider.callingInvocationForFunctionInvocation(this.pendingChanges.theseusInvocationId).done(function (caller) {
-            this.hostEditor.setCursorPos(caller.range.end.line, caller.range.end.ch, true);
+            this.hostEditor.setCursorPos(caller.range.end.line - 1, caller.range.end.ch, true);
             this.hostEditor.focus();
 
             this.hostEditor._codeMirror.addLineClass(caller.range.end.line - 1, "background", "ti-highlight");
