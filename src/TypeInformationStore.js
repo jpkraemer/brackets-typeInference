@@ -339,7 +339,7 @@ define(function (require, exports, module) {
 				propertiesToUpdate: {},
 				propertiesToRemove: {},
 				original: _.cloneDeep(oldDoc),
-				pendingChanges: {}
+				pendingChanges: { theseusInvocationId: newDoc.theseusInvocationId }
 			};
 
 			var generalizedResult = generalizingMergePolicy(oldDoc, newDoc);

@@ -11,6 +11,7 @@ define(function (require, exports, module) {
     var Editor                         = brackets.getModule("editor/Editor").Editor;
 	var InlineWidget 			       = brackets.getModule("editor/InlineWidget").InlineWidget;
     var JSDocTypeProvider              = require("./JSDocTypeProvider");
+    var TheseusTypeProvider            = require("./TheseusTypeProvider");
     var TypeInformationHTMLRenderer    = require("./TypeInformationHTMLRenderer");
     var TypeInformationJSDocRenderer   = require("./TypeInformationJSDocRenderer");
     var TypeInformationStore           = require("./TypeInformationStore");
@@ -279,9 +280,16 @@ define(function (require, exports, module) {
                 pendingChange.name = "Type changed";
                 var $pendingLine = $(TypeInformationHTMLRenderer.typeToHTML(pendingChange, true));
                 $pendingLine.addClass('ti-alert');
+
                 var $markCorrectButton = $("<a />").addClass('ti-button').text("Mark as correct"); 
                 $markCorrectButton.on("click", this._markCorrectClickHandler.bind(this, argumentTypeId));
                 $pendingLine.append($markCorrectButton);
+
+                if (this.pendingChanges.theseusInvocationId !== undefined) {
+                    var $showCallLocation = $("<a />").addClass('ti-button').text("Show Call Location");
+                    $showCallLocation.on("click", this._showCallLocationClickHandler.bind(this, argumentTypeId));
+                    $pendingLine.append($showCallLocation);
+                }
 
                 $line.append($pendingLine);
             }
@@ -354,6 +362,22 @@ define(function (require, exports, module) {
         event.stopPropagation();
 
         this._render();
+   };
+
+   DocumentationInlineEditor.prototype._showCallLocationClickHandler = function(argumentTypeId, event) {
+        TheseusTypeProvider.callingInvocationForFunctionInvocation(this.pendingChanges.theseusInvocationId).done(function (caller) {
+            this.hostEditor.setCursorPos(caller.range.end.line, caller.range.end.ch, true);
+            this.hostEditor.focus();
+
+            this.hostEditor._codeMirror.addLineClass(caller.range.end.line - 1, "background", "ti-highlight");
+            setTimeout(function () {
+                this.hostEditor._codeMirror.removeLineClass(caller.range.end.line - 1, "background", "ti-highlight");
+            }.bind(this), 2000);
+        }.bind(this)).fail(function (err) {
+            console.log(err);
+        }.bind(this)); 
+
+       event.stopPropagation(); 
    };
 
     DocumentationInlineEditor.prototype._clickHandler = function(event) {

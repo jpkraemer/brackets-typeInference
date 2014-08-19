@@ -60,6 +60,43 @@ define(function (require, exports, module) {
 			}
 		}
 	}
+
+	function callingInvocationForFunctionInvocation (invocationId) {
+		var result = $.Deferred();
+
+		Agent.backtrace({
+			invocationId: invocationId,
+			range: [ 0, 2 ]
+		}, function (backtrace) {
+			if (backtrace.length === 2) {
+				var call = _.last(backtrace); 
+				var components = _.map(call.nodeId.split("-"), Number).slice(-4); 
+				var rangeAtTheEnd = _.every(components, function (component) {
+					return (! isNaN(component));
+				});
+
+				if (rangeAtTheEnd) {
+					call.range = {
+						start: {
+							line: components[0],
+							ch: components[1]
+						},
+						end: {
+							line: components[2],
+							ch: components[3]
+						}
+					};
+
+					result.resolve(call);
+					return;
+				}
+			}
+
+			result.reject("No location or caller found");
+		});
+
+		return result.promise();
+	}
 	
 	function _updateLoop () {
 		var newLogsHandler = function (results) {
@@ -74,7 +111,10 @@ define(function (require, exports, module) {
 
     			for (var i = 0; i < results.length; i++) {
     				var result = results[i]; 
-    				var resultToPassOn = { functionIdentifier: result.nodeId };
+    				var resultToPassOn = { 
+    					functionIdentifier: result.nodeId,
+    					theseusInvocationId: result.invocationId
+    				};
 
 					var argumentNames = _.pluck(result.arguments, "name");
 					resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
@@ -101,5 +141,6 @@ define(function (require, exports, module) {
     }
 
     exports.init = init; 
+    exports.callingInvocationForFunctionInvocation = callingInvocationForFunctionInvocation; 
 
 });
