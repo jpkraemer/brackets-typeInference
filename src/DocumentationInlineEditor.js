@@ -279,6 +279,10 @@ define(function (require, exports, module) {
         var pendingChanges; 
 
         var insertPendingChange = function (pendingChanges, $line, argumentTypeId) {
+            if (argumentTypeId === undefined) {
+                argumentTypeId = -1;
+            }
+
             pendingChanges = _.cloneDeep(pendingChanges);
             if ((pendingChanges !== undefined) && (! _.isEmpty(pendingChanges))) {
                 var $pendingChangesTable = $(TypeInformationHTMLRenderer.pendingChangesToHTML(pendingChanges, true));
@@ -389,20 +393,35 @@ define(function (require, exports, module) {
        this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
    };
 
-   DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, event) {
+   DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, pendingChangesKey, event) {
         if (argumentTypeId > -1) {
             //we have an argument change
-            this.typeInformation.argumentTypes[argumentTypeId] = this.pendingChanges.argumentTypes[argumentTypeId];
-            delete this.pendingChanges.argumentTypes[argumentTypeId];
+            this.typeInformation.argumentTypes[argumentTypeId] = this.pendingChanges[pendingChangesKey].argumentTypes[argumentTypeId];
+            _.forOwn(this.pendingChanges, function (pendingChange, key) {
+                if (pendingChange.argumentTypes !== undefined) {
+                    delete pendingChange.argumentTypes[argumentTypeId]; 
+                    if (pendingChange.argumentTypes.length === 0) {
+                        delete pendingChange.argumentTypes; 
+                    }
+                }
+            });
+            if (_.isEmpty(this.pendingChanges[pendingChangesKey])) {
+                delete this.pendingChanges[pendingChangesKey];
+            }
         } else {
-            this.typeInformation.returnType = this.pendingChanges.returnType; 
-            delete this.pendingChanges.returnType;
+            this.typeInformation.returnType = this.pendingChanges[pendingChangesKey].returnType; 
+            _.forOwn(this.pendingChanges, function (pendingChange, key) {
+                    delete pendingChange.returnType; 
+            });
+            if (_.isEmpty(this.pendingChanges[pendingChangesKey])) {
+                delete this.pendingChanges[pendingChangesKey];
+            }
         }
 
         TypeInformationStore.userUpdatedTypeInformation(this, [ this.typeInformation ], false);
 
-        event.stopPropagation();
 
+        event.stopPropagation();
         this._render();
    };
 
