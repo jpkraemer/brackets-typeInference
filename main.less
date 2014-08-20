@@ -17,25 +17,35 @@
 		padding-left: 8px; 
 		padding-right: 4px;
 	}
+
+	.table {
+		tr>td:last-child {
+			width: 100%;
+		}
+
+		.ti-table-caption {
+			font-family: "Lato";
+			font-style: italic;
+			color: #333;
+
+		}
+
+		margin-left: 20px;
+	}
 }
 
-.ti-alert {
-	td:first-child {
-		background-image: url(./img/error-icon.svg);
-		background-repeat: no-repeat;
-		background-position: 0px 2px;
-		@media 
-		(-webkit-min-device-pixel-ratio: 2), 
-		(min-resolution: 192dpi) { 
-		    padding-left: 38px;
-		}
-		padding-left: 19px;	
-
-		font-family: "Lato"; 
-		color: #777;
+a.ti-alert {
+	background-image: url(./img/error-icon.svg);
+	background-repeat: no-repeat;
+	background-position: 0px 1px;
+	padding-left: 19px;
+	@media 
+	(-webkit-min-device-pixel-ratio: 2), 
+	(min-resolution: 192dpi) { 
+	    padding-left: 38px; 
 	}
-
-	margin-bottom: 9px;
+	display: block;
+	box-sizing: border-box;
 }
 
 .ti-button {
@@ -69,6 +79,7 @@
 		font-size: 12px; 
 		font-weight: bold;
 		font-family: "Lato"; 
+		color: #333;
 		margin: 0;
 		margin-top: .5em;
 	}
@@ -92,6 +103,7 @@
 	min-width: 100px;
 	padding-left: 5px; 
 	padding-right: 5px;
+	white-space: nowrap;
 }
 
 .ti-property-description {

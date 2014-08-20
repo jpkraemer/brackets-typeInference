@@ -196,35 +196,37 @@ define(function (require, exports, module) {
 		_.forOwn(results, function (num, functionIdentifier) {
 			var resultsForFunctionIdentifier = results[functionIdentifier];	
 			//if there is more then one result per function identifier, we premerge these. Only happens for live data providers, of course.
-			var argumentTypeArrays = _.pluck(resultsForFunctionIdentifier, "argumentTypes");
+			// var argumentTypeArrays = _.pluck(resultsForFunctionIdentifier, "argumentTypes");
 
-			var aggregateTypes = argumentTypeArrays[0];
-			for (i = 1; i < argumentTypeArrays.length; i++) {
-				var currentTypes = argumentTypeArrays[i]; 
+			// var aggregateTypes = argumentTypeArrays[0];
+			// for (i = 1; i < argumentTypeArrays.length; i++) {
+			// 	var currentTypes = argumentTypeArrays[i]; 
 
-				if (currentTypes.length !== aggregateTypes.length) {
-					aggregateTypes = currentTypes; 
-				} else {
-					for (j = 0; j < currentTypes.length; j++) {
-						aggregateTypes[j] = _mergeTypeSpecs(currentTypes[j], aggregateTypes[j]); 
-					}
-				}
-			}
+			// 	if (currentTypes.length !== aggregateTypes.length) {
+			// 		aggregateTypes = currentTypes; 
+			// 	} else {
+			// 		for (j = 0; j < currentTypes.length; j++) {
+			// 			aggregateTypes[j] = _mergeTypeSpecs(currentTypes[j], aggregateTypes[j]); 
+			// 		}
+			// 	}
+			// }
 
-			var mergedTypeInformation = _.last(resultsForFunctionIdentifier); 
-			mergedTypeInformation.argumentTypes = aggregateTypes;
+			// var mergedTypeInformation = _.last(resultsForFunctionIdentifier); 
+			// mergedTypeInformation.argumentTypes = aggregateTypes;
 			
-			_updateWithTypeInformation(provider, mergedTypeInformation, isMerge);
+			_updateWithTypeInformation(provider, functionIdentifier, resultsForFunctionIdentifier, isMerge);
 		});
 	}
 
 	/**
 	 * This method updates type information. Type information degrades always to the most specific type spec possible, that still matches all arugments seen so far. 
+	 * @param {string|object} provider The provider of the update
+	 * @param {string} functionIdentifier The function identifier for which information is being updated
 	 * @param  {TypeInformation} new type information
 	 * @param {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
 	 * if false the existing record will be overwritten.
 	 */
-	function _updateWithTypeInformation (provider, typeInformation, isMerge) {
+	function _updateWithTypeInformation (provider, functionIdentifier, typeInformationArray, isMerge) {
 
 		var successHandler = function (newDocs) {
 			TIUtils.log("Successfully update type information: " + newDocs);
@@ -381,19 +383,53 @@ define(function (require, exports, module) {
 			return result;
 		};
 
+		if (typeInformationArray.length === 0) {
+			TIUtils.log("Empty update, aborting"); 
+			return;
+		}
+
+		//duplicate _.merge
+		var merge = function (a, b, keysToMergeByCopy) {
+			_.forOwn(b, function (value, key) {
+				if ((_.contains(["array", "object"], typeof b[key])) && 
+					(_.contains(["array", "object"], typeof a[key])) &&
+					(! _.contains(keysToMergeByCopy, key))) {
+
+					merge(a[key], b[key]); 
+				} else {
+					a[key] = value;
+				}
+			});
+
+			return a;
+		};
+
 		_executeDatabaseCommand("find", 
-			{ functionIdentifier: typeInformation.functionIdentifier }
+			{ functionIdentifier: functionIdentifier }
 		).done(function (docs) {
 			var isUpdate = false;
 			var doc;
+			var typeInformation;
 			var changes = {};
 			var typesDidChange; 
+			var pendingChanges;
+			var i;
 			
 			if (docs.length > 0) {
 				isUpdate = true; 
 				doc = docs[0];
 			} else {
 				isUpdate = false;
+			}
+
+			typeInformation = _.cloneDeep(typeInformationArray[0]);
+
+			if (typeInformationArray.length > 1) { 
+				//premerge changes
+				for (i = 1; i < typeInformationArray.length; i++) {
+					var changesToMerge = generalizingMergePolicy(_.cloneDeep(typeInformation), typeInformationArray[i]); 
+					typeInformation = merge(typeInformation, changesToMerge.propertiesToUpdate, [ "lastArguments" ]); 
+				}
 			}
 
 			if (! isUpdate) {
@@ -403,12 +439,21 @@ define(function (require, exports, module) {
 			} else if (! isMerge) {
 				changes = overwriteMergePolicy(doc, typeInformation); 
 			} else if (options.mergeAutomaticUpdatesConservatively && (provider === TheseusTypeProvider)) {
+				pendingChanges = {}; 
+				delete typeInformation.theseusInvocationId; 
 				changes = conservativeMergePolicy(doc, typeInformation);
+				pendingChanges.merge = changes.pendingChanges; 
+
+				for (i = 0; i < typeInformationArray.length; i++) {
+					var singleTypeInformation = typeInformationArray[i]; 
+					var changesFromSingleTypeInformation = conservativeMergePolicy(doc, singleTypeInformation);
+					pendingChanges[singleTypeInformation.theseusInvocationId] = changesFromSingleTypeInformation.pendingChanges;
+				}
 			} else {
 				changes = generalizingMergePolicy(doc, typeInformation);
 			}
 
-			_.merge(doc, changes.propertiesToUpdate);
+			merge(doc, changes.propertiesToUpdate);
 
 			if ((_.size(changes.propertiesToUpdate) + _.size(changes.propertiesToRemove)) > 0) {
 				_executeDatabaseCommand("update",  
@@ -419,7 +464,7 @@ define(function (require, exports, module) {
 						if (updateInfo.newDoc !== undefined) {
 							$(exports).trigger("didUpdateTypeInformation", [ updateInfo.newDoc ]);
 						} else {
-							$(exports).trigger("didUpdateTypeInformation", [ doc, changes.pendingChanges ]); 
+							$(exports).trigger("didUpdateTypeInformation", [ doc, pendingChanges ]); 
 						}
 					}).fail(errorHandler);
 			}

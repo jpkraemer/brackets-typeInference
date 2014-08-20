@@ -91,6 +91,7 @@ define(function (require, exports, module) {
         this._onEditorKeyEvent          = this._onEditorKeyEvent.bind(this);
         this._didUpdateTypeInformation  = this._didUpdateTypeInformation.bind(this);
         this._clickHandler              = this._clickHandler.bind(this);
+        this._recalculateHeight         = this._recalculateHeight.bind(this);
 
 		InlineWidget.call(this);
 
@@ -275,26 +276,47 @@ define(function (require, exports, module) {
      */
      DocumentationInlineEditor.prototype._render = function() {
         var $line;
-        var pendingChange; 
+        var pendingChanges; 
 
-        var insertPendingChange = function (pendingChange, $line, argumentTypeId) {
-            pendingChange = _.cloneDeep(pendingChange);
-            if (pendingChange !== undefined) {
-                pendingChange.name = "Type changed";
-                var $pendingLine = $(TypeInformationHTMLRenderer.typeToHTML(pendingChange, true));
-                $pendingLine.addClass('ti-alert');
+        var insertPendingChange = function (pendingChanges, $line, argumentTypeId) {
+            pendingChanges = _.cloneDeep(pendingChanges);
+            if ((pendingChanges !== undefined) && (! _.isEmpty(pendingChanges))) {
+                var $pendingChangesTable = $(TypeInformationHTMLRenderer.pendingChangesToHTML(pendingChanges, true));
+                $pendingChangesTable.hide();
 
-                var $markCorrectButton = $("<a />").addClass('ti-button').text("Mark as correct"); 
-                $markCorrectButton.on("click", this._markCorrectClickHandler.bind(this, argumentTypeId));
-                $pendingLine.append($markCorrectButton);
+                var $mergeButton = $pendingChangesTable.find("tr:eq(1) a");
+                $mergeButton.on("click", this._markCorrectClickHandler.bind(this, argumentTypeId, "merge")); 
 
-                if (this.pendingChanges.theseusInvocationId !== undefined) {
-                    var $showCallLocation = $("<a />").addClass('ti-button').text("Show Call Location");
-                    $showCallLocation.on("click", this._showCallLocationClickHandler.bind(this, argumentTypeId));
-                    $pendingLine.append($showCallLocation);
-                }
+                var $individualRows = $pendingChangesTable.find("tr:gt(2)");
+                $individualRows.each(function (index, element) {
+                    var $row = $(element); 
+                    var theseusInvocationId = $row.data("theseusinvocationid");
+                    $mergeButton = $row.find("a:first"); 
+                    $mergeButton.on("click", this._markCorrectClickHandler.bind(this, argumentTypeId, theseusInvocationId));
 
-                $line.append($pendingLine);
+                    var $jumpToCallButton = $row.find("a:last");
+                    $jumpToCallButton.on("click", this._showCallLocationClickHandler.bind(this, theseusInvocationId));
+                }.bind(this));
+
+                var $openChangesButton = $("<a />").addClass('ti-button').text("Type mismatch"); 
+                $openChangesButton.addClass('ti-alert');
+                $openChangesButton.on("click", function (event) {
+                    $pendingChangesTable.toggle();
+                    setTimeout(function () {
+                        var $cells = $pendingChangesTable.find(".ti-property-type");
+                        var maxWidth = _.max($cells.map(function() {
+                            return $(this).outerWidth(); 
+                        }).get());
+                        // $cells.outerWidth(maxWidth);
+
+                        this._recalculateHeight();
+                    }.bind(this), 1);
+
+                    event.stopPropagation();
+                }.bind(this));
+
+                $line.find("tr").append($openChangesButton);
+                $line.append($pendingChangesTable);
             }
         }.bind(this);
 
@@ -312,10 +334,20 @@ define(function (require, exports, module) {
         if (this.typeInformation.argumentTypes && (this.typeInformation.argumentTypes.length > 0)) {
             this.$contentDiv.append($("<h2 />").append("Parameters").addClass("ti-headline"));
 
+            var omitFunction = function (i, pendingChange) {
+                return (pendingChange.argumentTypes && pendingChange.argumentTypes[i]) === undefined; 
+            };
+
+            var mapValuesFunction = function (i, pendingChange) {
+                return pendingChange.argumentTypes[i]; 
+            };
+
             for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
-                $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));
-                pendingChange = this && this.pendingChanges && this.pendingChanges.argumentTypes && this.pendingChanges.argumentTypes[i];
-                insertPendingChange(pendingChange, $line, i);
+                $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));                 
+                if (this.pendingChanges !== undefined) {
+                    pendingChanges = _(this.pendingChanges).omit(omitFunction.bind(this, i)).mapValues(mapValuesFunction.bind(this, i)).value();
+                    insertPendingChange(pendingChanges, $line, i);
+                }
                 $line.data("argumentId", i);
                 $line.on("click", this._clickHandler);
                 this.$contentDiv.append($line); 
@@ -325,14 +357,21 @@ define(function (require, exports, module) {
         if (this.typeInformation.returnType) {
             $line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.returnType, false));
             $line.addClass('ti-return');
-            pendingChange = this && this.pendingChanges && this.pendingChanges.returnType;
-            insertPendingChange(pendingChange, $line, undefined);
+            if (this.pendingChanges !== undefined) {
+                pendingChanges = _(this.pendingChanges).omit(function (pendingChange) {
+                    return (pendingChange.returnType === undefined); 
+                }).mapValues("returnType").value();
+                insertPendingChange(pendingChanges, $line, undefined);
+            }
 
             $line.on("click", this._clickHandler);
             this.$contentDiv.append($line);
         }
 
-        var cellsToAlign = [ this.$contentDiv.find(".ti-property-type"), this.$contentDiv.find(".ti-property-name") ];
+        this._displayEditorForPartOfTypeInfo();
+
+        var cellsToAlign =  [ this.$contentDiv.find(".ti-property-type").not(".table .ti-property-type"), 
+                              this.$contentDiv.find(".ti-property-name") ];
         setTimeout(function () {
             _.forEach(cellsToAlign, function ($cells) {
                 var maxWidth = _.max($cells.map(function() {
@@ -341,13 +380,13 @@ define(function (require, exports, module) {
                 //maxwidth should automatically include max-width set in css
                 $cells.outerWidth(maxWidth);
             });
+
+            this._recalculateHeight(); 
         }.bind(this), 1);
+   };
 
-        this._displayEditorForPartOfTypeInfo();
-
-       setTimeout(function () {
-           this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
-       }.bind(this), 1);
+   DocumentationInlineEditor.prototype._recalculateHeight = function() {
+       this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
    };
 
    DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, event) {
@@ -367,8 +406,8 @@ define(function (require, exports, module) {
         this._render();
    };
 
-   DocumentationInlineEditor.prototype._showCallLocationClickHandler = function(argumentTypeId, event) {
-        TheseusTypeProvider.callingInvocationForFunctionInvocation(this.pendingChanges.theseusInvocationId).done(function (caller) {
+   DocumentationInlineEditor.prototype._showCallLocationClickHandler = function(theseusInvocationId, event) {
+        TheseusTypeProvider.callingInvocationForFunctionInvocation(theseusInvocationId).done(function (caller) {
             this.hostEditor.setCursorPos(caller.range.end.line - 1, caller.range.end.ch, true);
             this.hostEditor.focus();
 

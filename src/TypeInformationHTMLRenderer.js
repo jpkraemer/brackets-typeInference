@@ -7,6 +7,12 @@ define(function (require, exports, module) {
 	var _ 				= require("./lib/lodash");
 	var marked 			= require("./node/node_modules/marked/lib/marked");
 
+	/**
+	 * Render a single typespec
+	 * @param  {Typespec}  type
+	 * @param  {Boolean} isArgument
+	 * @return {string} acutal HTML
+	 */
 	function typeToHTML (type, isArgument) {
 		var singleArgumentTemplate = require("text!./templates/singleArgument.html");
 		var templateValues = {
@@ -20,6 +26,36 @@ define(function (require, exports, module) {
 		}
 
 		return Mustache.render(singleArgumentTemplate, templateValues); 
+	}
+
+	function pendingChangesToHTML (pendingChanges, isArgument) {
+		var pendingChangesTemplate = require("text!./templates/changesTable.html");
+		var templateValues = {
+			isArgument: isArgument, 
+			name: pendingChanges.merge.name,
+			type: typeSpecToHTML(pendingChanges.merge)
+		};
+
+		if (pendingChanges.merge.description !== undefined) {
+			templateValues.description = marked(pendingChanges.merge.description);
+		}
+
+		templateValues.individualChanges = _.map(_.omit(pendingChanges, "merge"), function (pendingChange, theseusInvocationId) {
+			var result = {
+				isArgument: isArgument, 
+				name: pendingChange.name,
+				theseusInvocationId: theseusInvocationId,
+				type: typeSpecToHTML(pendingChange)
+			};
+
+			if (pendingChange.description !== undefined) { 
+				result.description = pendingChange.description;
+			}
+
+			return result;
+		});
+
+		return Mustache.render(pendingChangesTemplate, templateValues);
 	}
 
 	/** 
@@ -76,6 +112,7 @@ define(function (require, exports, module) {
 
 	exports.typeToHTML = typeToHTML;
 	exports.typeSpecToHTML = typeSpecToHTML;
+	exports.pendingChangesToHTML = pendingChangesToHTML;
 	exports.markdownStringToHTML = markdownStringToHTML; 
 
 });
