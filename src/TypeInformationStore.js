@@ -289,7 +289,6 @@ define(function (require, exports, module) {
 
 			if (newDoc.argumentTypes !== undefined) {
 				var newTypes = newDoc.argumentTypes;
-
 				var typesDidChange = false;
 
 				if ((oldDoc.argumentTypes !== undefined) && (oldDoc.argumentTypes.length === newDoc.argumentTypes.length)) {
@@ -320,7 +319,7 @@ define(function (require, exports, module) {
 			}
 
 			_(newDoc).omit("argumentTypes", "returnType").forOwn(function(value, key) {
-				if (oldDoc[key] !== newDoc[key]) {
+				if (! _.isEqual(oldDoc[key], newDoc[key])) {
 					result.propertiesToUpdate[key] = newDoc[key];
 				}
 			});
@@ -439,7 +438,7 @@ define(function (require, exports, module) {
 			} else if (! isMerge) {
 				changes = overwriteMergePolicy(doc, typeInformation); 
 			} else if (options.mergeAutomaticUpdatesConservatively && (provider === TheseusTypeProvider)) {
-				pendingChanges = {}; 
+				pendingChanges = {};
 				delete typeInformation.theseusInvocationId; 
 				changes = conservativeMergePolicy(doc, typeInformation);
 				pendingChanges.merge = changes.pendingChanges; 
@@ -454,6 +453,11 @@ define(function (require, exports, module) {
 			}
 
 			merge(doc, changes.propertiesToUpdate);
+			_.forOwn(changes.propertiesToRemove, function (shouldDelete, key) {
+				if (shouldDelete) {
+					delete doc[key];
+				}
+			});
 
 			if ((_.size(changes.propertiesToUpdate) + _.size(changes.propertiesToRemove)) > 0) {
 				_executeDatabaseCommand("update",  
@@ -467,6 +471,8 @@ define(function (require, exports, module) {
 							$(exports).trigger("didUpdateTypeInformation", [ doc, pendingChanges ]); 
 						}
 					}).fail(errorHandler);
+			} else if (pendingChanges) {
+				$(exports).trigger('didUpdateTypeInformation', [ doc, pendingChanges ]);
 			}
 		}).fail(errorHandler); 
 	}
