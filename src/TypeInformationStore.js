@@ -40,6 +40,17 @@ define(function (require, exports, module) {
 		mergeAutomaticUpdatesConservatively: false
 	};
 
+	Async.PromiseQueue.prototype.addFront = function (op) {
+        this._queue.unshift(op);
+
+        // If something is currently executing, then _doNext() will get called when it's done. If nothing
+        // is executing (in which case the queue should have been empty), we need to call _doNext() to kickstart
+        // the queue.
+        if (!this._curPromise) {
+            this._doNext();
+        }
+    };
+
 	function _init () {
 
 		_projectChanged(ProjectManager.getProjectRoot());
@@ -75,6 +86,27 @@ define(function (require, exports, module) {
 
 		return result.promise();
 	}
+
+	function _executeDatabaseCommandNow () {
+		if (!queue) {
+			queue = new Async.PromiseQueue();
+		}
+
+		var result = $.Deferred();
+		var originalArguments = Array.prototype.slice.apply(arguments);
+
+		queue.addFront(function () {
+			if (originalArguments[0] !== "connect") {
+				originalArguments.splice(1, 0, projectTypeDatabaseHandle);
+			}
+			return TIDatabase.exec.apply(TIDatabase, originalArguments)
+				.done(function () { result.resolve.apply(result, arguments); })
+				.fail(function () { result.reject.apply(result, arguments); });
+		});
+
+		return result.promise();
+	}
+
 
 	/**
 	 * Returns a promise that resolves with the type information record for the given function identifier
@@ -444,7 +476,7 @@ define(function (require, exports, module) {
 			});
 
 			if ((_.size(changes.propertiesToUpdate) + _.size(changes.propertiesToRemove)) > 0) {
-				_executeDatabaseCommand("update",  
+				_executeDatabaseCommandNow("update",  
 						{ functionIdentifier: typeInformation.functionIdentifier }, 
 						{ $set: changes.propertiesToUpdate, $unset: changes.propertiesToRemove },
 						{ upsert: true }
