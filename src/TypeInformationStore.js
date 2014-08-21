@@ -164,8 +164,8 @@ define(function (require, exports, module) {
 		});
 	}
 
-	function userUpdatedTypeInformation (provider, results, isMerge) {
-		_didReceiveTypeInformation(null, provider, results, isMerge);
+	function userUpdatedTypeInformation (provider, results, isMerge, shouldMergeConservatively) {
+		_didReceiveTypeInformation(null, provider, results, isMerge, shouldMergeConservatively);
 	}
 
 	/**
@@ -176,7 +176,7 @@ define(function (require, exports, module) {
 	 * @param  {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
 	 * if false the existing record will be overwritten.
 	 */
-	function _didReceiveTypeInformation (event, provider, results, isMerge) {
+	function _didReceiveTypeInformation (event, provider, results, isMerge, shouldMergeConservatively) {
 		var i, j;
 
 		if (!Array.isArray(results)) {
@@ -194,27 +194,8 @@ define(function (require, exports, module) {
 		results = _.groupBy(results, "functionIdentifier");
 
 		_.forOwn(results, function (num, functionIdentifier) {
-			var resultsForFunctionIdentifier = results[functionIdentifier];	
-			//if there is more then one result per function identifier, we premerge these. Only happens for live data providers, of course.
-			// var argumentTypeArrays = _.pluck(resultsForFunctionIdentifier, "argumentTypes");
-
-			// var aggregateTypes = argumentTypeArrays[0];
-			// for (i = 1; i < argumentTypeArrays.length; i++) {
-			// 	var currentTypes = argumentTypeArrays[i]; 
-
-			// 	if (currentTypes.length !== aggregateTypes.length) {
-			// 		aggregateTypes = currentTypes; 
-			// 	} else {
-			// 		for (j = 0; j < currentTypes.length; j++) {
-			// 			aggregateTypes[j] = _mergeTypeSpecs(currentTypes[j], aggregateTypes[j]); 
-			// 		}
-			// 	}
-			// }
-
-			// var mergedTypeInformation = _.last(resultsForFunctionIdentifier); 
-			// mergedTypeInformation.argumentTypes = aggregateTypes;
-			
-			_updateWithTypeInformation(provider, functionIdentifier, resultsForFunctionIdentifier, isMerge);
+			var resultsForFunctionIdentifier = results[functionIdentifier];			
+			_updateWithTypeInformation(provider, functionIdentifier, resultsForFunctionIdentifier, isMerge, shouldMergeConservatively);
 		});
 	}
 
@@ -226,8 +207,7 @@ define(function (require, exports, module) {
 	 * @param {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
 	 * if false the existing record will be overwritten.
 	 */
-	function _updateWithTypeInformation (provider, functionIdentifier, typeInformationArray, isMerge) {
-
+	function _updateWithTypeInformation (provider, functionIdentifier, typeInformationArray, isMerge, shouldMergeConservatively) {
 		var successHandler = function (newDocs) {
 			TIUtils.log("Successfully update type information: " + newDocs);
 		};
@@ -414,6 +394,10 @@ define(function (require, exports, module) {
 			var pendingChanges;
 			var i;
 			
+			if (shouldMergeConservatively === undefined) {
+				shouldMergeConservatively = false;
+			}
+
 			if (docs.length > 0) {
 				isUpdate = true; 
 				doc = docs[0];
@@ -437,7 +421,7 @@ define(function (require, exports, module) {
 				changes.propertiesToRemove = {};
 			} else if (! isMerge) {
 				changes = overwriteMergePolicy(doc, typeInformation); 
-			} else if (options.mergeAutomaticUpdatesConservatively && (provider === TheseusTypeProvider)) {
+			} else if ((options.mergeAutomaticUpdatesConservatively && (provider === TheseusTypeProvider)) || shouldMergeConservatively) {
 				pendingChanges = {};
 				delete typeInformation.theseusInvocationId; 
 				changes = conservativeMergePolicy(doc, typeInformation);
@@ -540,7 +524,7 @@ define(function (require, exports, module) {
 			}
 
 			for (; i < longerSpec.length; i++) {
-				tmpType = typeA.spec[i]; 
+				tmpType = longerSpec[i]; 
 				tmpType.optional = true;
 				mergedTypes.push(tmpType); 
 			}

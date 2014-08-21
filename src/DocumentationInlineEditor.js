@@ -389,39 +389,33 @@ define(function (require, exports, module) {
         }.bind(this), 1);
    };
 
-   DocumentationInlineEditor.prototype._recalculateHeight = function() {
-       this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
-   };
+    DocumentationInlineEditor.prototype._recalculateHeight = function() {
+        this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
+    };
 
-   DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, pendingChangesKey, event) {
+    DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, pendingChangesKey, event) {
         if (argumentTypeId > -1) {
             //we have an argument change
             this.typeInformation.argumentTypes[argumentTypeId] = this.pendingChanges[pendingChangesKey].argumentTypes[argumentTypeId];
-            _.forOwn(this.pendingChanges, function (pendingChange, key) {
-                if (pendingChange.argumentTypes !== undefined) {
-                    delete pendingChange.argumentTypes[argumentTypeId]; 
-                    if (pendingChange.argumentTypes.length === 0) {
-                        delete pendingChange.argumentTypes; 
-                    }
-                }
-            });
-            if (_.isEmpty(this.pendingChanges[pendingChangesKey])) {
-                delete this.pendingChanges[pendingChangesKey];
-            }
         } else {
             this.typeInformation.returnType = this.pendingChanges[pendingChangesKey].returnType; 
-            _.forOwn(this.pendingChanges, function (pendingChange, key) {
-                    delete pendingChange.returnType; 
-            });
-            if (_.isEmpty(this.pendingChanges[pendingChangesKey])) {
-                delete this.pendingChanges[pendingChangesKey];
-            }
         }
 
         TypeInformationStore.userUpdatedTypeInformation(this, [ this.typeInformation ], false);
 
+        //we need to check if the other pending changes now actually conform to the type info. 
+        //let's just submit the pending changes as new type information, if they merge flawlessly, we're good, 
+        //otherwise we will just get them back later. 
+        var typeInformationFromPendingChanges = _.map(_.omit(this.pendingChanges, "merge"), function (pendingChange) {
+            pendingChange.functionIdentifier = this.typeInformation.functionIdentifier;
+            return pendingChange;
+        }.bind(this));
+
+        TypeInformationStore.userUpdatedTypeInformation(this, typeInformationFromPendingChanges, true, true);
 
         event.stopPropagation();
+
+        this.pendingChanges = undefined;        
         this._render();
    };
 
