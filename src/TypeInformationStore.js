@@ -523,6 +523,11 @@ define(function (require, exports, module) {
 			resultType.count = _mergeCounts(typeA.count, typeB.count);
 		}
 
+		//merge optional
+		if (typeA.optional || typeB.optional) {
+			resultType.optional = true;
+		}
+
 		if (typeA.type !== typeB.type) {
 			if ((_.contains(PRIMITIVE_TYPES, typeA.type)) && (_.contains(PRIMITIVE_TYPES, typeB.type))) {
 				resultType.type = "multiple";
