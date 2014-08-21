@@ -68,7 +68,7 @@ define(function (require, exports, module) {
 			invocationId: invocationId,
 			range: [ 0, 2 ]
 		}, function (backtrace) {
-			if (backtrace.length === 2) {
+			if (backtrace && backtrace.length === 2) {
 				var call = _.last(backtrace); 
 				var components = _.map(call.nodeId.split("-"), Number).slice(-4); 
 				var rangeAtTheEnd = _.every(components, function (component) {
