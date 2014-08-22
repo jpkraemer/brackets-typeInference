@@ -18,6 +18,8 @@ define(function (require, exports, module) {
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
 	var TIUtils 					= require("./src/TIUtils");
 
+	var EVENT_NAMESPACE = ".type-inference-main";
+
 	var inlineWidgetsByFunctionIdentifier = {};
 	var currentDocument; 
 	var hostEditor;
@@ -56,13 +58,18 @@ define(function (require, exports, module) {
 		});
 		inlineWidgetsByFunctionIdentifier = {};
 
-		currentDocument = newCurrentDocument;
+		if (hostEditor !== undefined) { 
+			hostEditor._codeMirror.off(EVENT_NAMESPACE);
+		}
 
-		hostEditor = EditorManager.getCurrentFullEditor();
+		currentDocument = newCurrentDocument;
 
 		if (currentDocument.getLanguage().getMode() !== "javascript") {
 			return; 
 		}
+
+		hostEditor = EditorManager.getCurrentFullEditor();
+		hostEditor._codeMirror.on("keydown", _onEditorKeyEvent);
 
 		TypeInformationStore.functionIdentifiersForFile(currentDocument.file.fullPath).done(function (functionIdentifiers) {
 			var functionLocations = FunctionTracker.functionLocationsInCurrentDocument(); 
@@ -86,6 +93,41 @@ define(function (require, exports, module) {
 			}
 		}
 	}
+
+    function _onEditorKeyEvent (theEditor, event) { 	
+        //sanity checks
+        if ((event.type !== "keydown") || (theEditor !== EditorManager.getCurrentFullEditor()._codeMirror)) {
+            TIUtils.log("_onEditorKeyEvent in main.js callback called with invalid event or unknown editor");
+            return;
+        }
+
+        var cursorPos = theEditor.getCursor();
+        var inlineWidget; 
+        var fromBelow;
+
+        switch (event.keyCode) {
+            case 38: 
+                //Arrow Key Up
+     			inlineWidget = _.find(inlineWidgetsByFunctionIdentifier, function (inlineWidget) {
+     				var range = inlineWidget.getCurrentRange(); 
+     				return (range.end.line === cursorPos.line - 1);
+     			});
+     			fromBelow = true;
+                break;
+            case 40:
+                //Arrow Key Down
+                inlineWidget = _.find(inlineWidgetsByFunctionIdentifier, function (inlineWidget) {
+     				var range = inlineWidget.getCurrentRange(); 
+     				return (range.start.line === cursorPos.line + 1);
+     			});
+     			fromBelow = false;
+                break;
+        }
+
+        if (inlineWidget !== undefined) {
+			inlineWidget.focus(fromBelow);
+		}
+    }
 
 	AppInit.appReady(_init);
 

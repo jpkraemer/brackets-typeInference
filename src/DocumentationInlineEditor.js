@@ -159,7 +159,7 @@ define(function (require, exports, module) {
      * The docPartSpecifier currently displayed in the editor
      * @type {{partType: string, id: number}}
      */
-    DocumentationInlineEditor.prototype.docPartSpecifier = null;
+    DocumentationInlineEditor.prototype.docPartSpecifier = undefined;
 
 	/**
      * Returns the current text range of the color we're attached to, or null if
@@ -185,11 +185,11 @@ define(function (require, exports, module) {
 		var matches, line;
 		do {
 			line = this.hostEditor.document.getLine(i);
-			matches = line.match(/^\s*\*/);
+			matches = line.match(/^\s*\/?\*/);
 			i++;			
 		} while (matches);
 
-		end = { line: i - 1 };
+		end = { line: i - 2 };
 		line = this.hostEditor.document.getLine(end.line);
 		matches = line.match(/^\s*\*\//);
 		if (matches && (end.ch === undefined)) {
@@ -268,7 +268,24 @@ define(function (require, exports, module) {
         if (needsRerender) {
             this._render();
         }
+    };
 
+    /**
+     * Move the cursor into the editor
+     * @param  {boolean} fromBelow If set to true, the last line will be edited, otherwise the first
+     */
+    DocumentationInlineEditor.prototype.focus = function(fromBelow) {
+        if (fromBelow === undefined) {
+            fromBelow = false;
+        }
+
+        if (fromBelow) {
+            this.docPartSpecifier = { partType: _.last(this._availableDocPartTypes()) };
+        } else {
+            this.docPartSpecifier = { partType: _.first(this._availableDocPartTypes()) };
+        }
+
+        this._render();
     };
 
     /**
@@ -480,7 +497,7 @@ define(function (require, exports, module) {
      * @param  {{partType: string, id: number}} docPartSpecifier partType can be "parameters", "description"
      */
     DocumentationInlineEditor.prototype._displayEditorForPartOfTypeInfo = function() {
-        if (this.docPartSpecifier === null) {
+        if (this.docPartSpecifier === undefined) {
             return;
         }
 
@@ -557,18 +574,32 @@ define(function (require, exports, module) {
         }
 
         var cursorPos = this.inlineEditor.getCursor();
+        var range, line;
 
         switch (event.keyCode) {
             case 38: //Arrow Up Key
                 //Arrow Key Up
                 if (cursorPos.line === 0) {
                     this.docPartSpecifier = this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier, true);
+                    if (this.docPartSpecifier === undefined) {
+                        //refocus host editor
+                        range = this.getCurrentRange(); 
+                        line = this.hostEditor.document.getLine(range.start.line - 1); 
+                        this.hostEditor.setCursorPos({ line: range.start.line - 1, ch: line.length - 1 }); 
+                        this.hostEditor.focus();
+                    }
                     this._render();
                 }
                 break;
             case 40:
                 if (cursorPos.line === this.inlineEditor.lineCount() - 1) {
                     this.docPartSpecifier = this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier);
+                    if (this.docPartSpecifier === undefined) {
+                        range = this.getCurrentRange(); 
+                        line = this.hostEditor.document.getLine(range.start.line + 1); 
+                        this.hostEditor.setCursorPos({ line: range.start.line + 1, ch: line.length }); 
+                        this.hostEditor.focus(); 
+                    }
                     this._render();
                 }
                 break;
@@ -579,13 +610,13 @@ define(function (require, exports, module) {
      * Handler for when an editor looses focus
      */
     DocumentationInlineEditor.prototype._onEditorBlur = function() {
-        this.docPartSpecifier = null;
+        this.docPartSpecifier = undefined;
         this._render();
     };
 
     /**
      * This function returns the docPartSpecifier before or after the given one. If there is no next or previous docPartSpecifier, it
-     * will return the unmodified input.
+     * will return undefined.
      * @param  {DocPartSpecifier}   docPartSpecifier
      * @param  {boolean}            backwards           If set to true, return the predecessor instead of the successor. Default is false
      * @return {DocPartSpecifier}
@@ -597,18 +628,36 @@ define(function (require, exports, module) {
         var result = _.clone(docPartSpecifier);
 
         var increment = backwards ? -1 : 1; 
-        var partTypeIndex = DOC_PART_ORDER.indexOf(result.partType); 
+        var localDocPartOrder = this._availableDocPartTypes();
+
+        var partTypeIndex = localDocPartOrder.indexOf(result.partType); 
 
         if (((result.id > 0) && backwards) || ((result.id < this._maxIdForDocPartType(result.partType)) && !backwards)) {
             result.id += increment; 
+        } else if (((partTypeIndex > 0) && backwards) || ((partTypeIndex < localDocPartOrder.length - 1) && !backwards)) {
+            result.partType = localDocPartOrder[partTypeIndex + increment];
+            result.id = backwards ? this._maxIdForDocPartType(result.partType) : 0;
         } else {
-            if (((partTypeIndex > 0) && backwards) || ((partTypeIndex < DOC_PART_ORDER.length) && !backwards)) {
-                result.partType = DOC_PART_ORDER[partTypeIndex + increment];
-                result.id = backwards ? this._maxIdForDocPartType(result.partType) : 0;
-            }
+            return undefined;
         }
 
         return result;
+    };
+
+    /**
+     * Returns the docPartTypes that are available for the current typeInformation
+     * @return {[string]}
+     */
+    DocumentationInlineEditor.prototype._availableDocPartTypes = function() {
+        var localDocPartOrder = _.clone(DOC_PART_ORDER);
+        if (this.typeInformation.argumentTypes === undefined) {
+            localDocPartOrder = _.omit(localDocPartOrder, "parameters");
+        }
+        if (this.typeInformation.returnType === undefined) {
+            localDocPartOrder = _.omit(localDocPartOrder, "return");
+        }
+
+        return localDocPartOrder;
     };
 
     /**
