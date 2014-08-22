@@ -585,7 +585,7 @@ define(function (require, exports, module) {
                         //refocus host editor
                         range = this.getCurrentRange(); 
                         line = this.hostEditor.document.getLine(range.start.line - 1); 
-                        this.hostEditor.setCursorPos({ line: range.start.line - 1, ch: line.length - 1 }); 
+                        this.hostEditor.setCursorPos({ line: range.start.line - 1, ch: line.length }); 
                         this.hostEditor.focus();
                     }
                     this._render();
@@ -596,8 +596,8 @@ define(function (require, exports, module) {
                     this.docPartSpecifier = this._nextDocPartSpecifierForDocPartSpecifier(this.docPartSpecifier);
                     if (this.docPartSpecifier === undefined) {
                         range = this.getCurrentRange(); 
-                        line = this.hostEditor.document.getLine(range.start.line + 1); 
-                        this.hostEditor.setCursorPos({ line: range.start.line + 1, ch: line.length }); 
+                        line = this.hostEditor.document.getLine(range.end.line + 1); 
+                        this.hostEditor.setCursorPos({ line: range.end.line + 1, ch: line.length }); 
                         this.hostEditor.focus(); 
                     }
                     this._render();
@@ -651,10 +651,10 @@ define(function (require, exports, module) {
     DocumentationInlineEditor.prototype._availableDocPartTypes = function() {
         var localDocPartOrder = _.clone(DOC_PART_ORDER);
         if (this.typeInformation.argumentTypes === undefined) {
-            localDocPartOrder = _.omit(localDocPartOrder, "parameters");
+            localDocPartOrder.splice(localDocPartOrder.indexOf("parameters"), 1);
         }
         if (this.typeInformation.returnType === undefined) {
-            localDocPartOrder = _.omit(localDocPartOrder, "return");
+            localDocPartOrder.splice(localDocPartOrder.indexOf("return"), 1);
         }
 
         return localDocPartOrder;
