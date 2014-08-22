@@ -196,6 +196,16 @@ define(function (require, exports, module) {
 		});
 	}
 
+	/**
+	 * This method is a straight forward to the didReceiveTypeInformation method. The only difference is, 
+	 * that this one is exported. It is used for the Documentation Inline Editor that can not be required here, to avoid 
+	 * circular references. 
+	 * @param  {Object} provider the type provider triggering the update
+	 * @param  {[Type Information records]} results
+	 * @param  {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
+	 * if false the existing record will be overwritten.
+	 * @param  {boolean} shouldMergeConservatively If set to true, will use conservative merging strategy regardless of type provider
+	 * */
 	function userUpdatedTypeInformation (provider, results, isMerge, shouldMergeConservatively) {
 		_didReceiveTypeInformation(null, provider, results, isMerge, shouldMergeConservatively);
 	}
@@ -207,6 +217,7 @@ define(function (require, exports, module) {
 	 * @param  {[Type Information records]} results
 	 * @param  {boolean} isMerge If set to true, results from the new type information will be merged with the old one, 
 	 * if false the existing record will be overwritten.
+	 * @param  {boolean} shouldMergeConservatively If set to true, will use conservative merging strategy regardless of type provider
 	 */
 	function _didReceiveTypeInformation (event, provider, results, isMerge, shouldMergeConservatively) {
 		var i, j;

@@ -61,6 +61,11 @@ define(function (require, exports, module) {
 		}
 	}
 
+	/**
+	 * Find the callsite for a given invocationId from theseus
+	 * @param  {string} invocationId
+	 * @return {{ range: { start: { line: number, ch: number }, end: { line: number, ch: number } } }}
+	 */
 	function callingInvocationForFunctionInvocation (invocationId) {
 		var result = $.Deferred();
 
@@ -98,6 +103,9 @@ define(function (require, exports, module) {
 		return result.promise();
 	}
 	
+	/**
+	 * This method is just called periodically to search for new Theseus results
+	 */
 	function _updateLoop () {
 		var newLogsHandler = function (results) {
     		if (results && results.length > 0) {
