@@ -33,7 +33,8 @@ define(function (require, exports, module) {
 
 							return {
 								name: type.name,
-								type: typeString
+								type: typeString,
+								typeInformation: type
 							};
 						}); 
 

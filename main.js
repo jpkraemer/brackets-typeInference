@@ -14,6 +14,7 @@ define(function (require, exports, module) {
 	var JSDocTypeProvider			= require("./src/JSDocTypeProvider");
 	var JSUtils						= brackets.getModule("language/JSUtils");
 	var ScopeManagerExtensions 		= require("./src/ScopeManagerExtensions");
+	var SessionExtensions 			= require("./src/SessionExtensions");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
 	var TIUtils 					= require("./src/TIUtils");
@@ -38,7 +39,9 @@ define(function (require, exports, module) {
 		JSDocTypeProvider.init();
 		FunctionTracker.init();
 
+		//initialize overwrites
 		ScopeManagerExtensions.init();
+		SessionExtensions.init();
 
 		$(DocumentManger).on("currentDocumentChange", _currentDocumentChange);
 		_currentDocumentChange(null, DocumentManger.getCurrentDocument());
