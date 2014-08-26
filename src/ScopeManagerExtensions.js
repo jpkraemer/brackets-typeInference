@@ -20,10 +20,12 @@ define(function (require, exports, module) {
 				var fullPath = document.file.fullPath; 
 				//we need to find the function name for the function call 
 				var sourceCode = document.getRange({ line: 0, ch: 0 }, functionOffset); 
-				var functionName = _.last(sourceCode.split(/\s|^/m)); 
+				var functionName = _.findLast(sourceCode.split(/\s|^/m), function (partString) {
+					return ! /^\s*$/.test(partString);
+				}); 
 
 				TypeInformationStore.typeInformationForFunctionNameInFile(functionName, fullPath).done(function (docs) {
-					if (docs.length > 0) {
+					if ((docs !== undefined) && (docs.length > 0)) {
 					// if (false) {
 						var typeInformation = docs[0];
 
