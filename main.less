@@ -139,3 +139,120 @@ a.ti-alert {
 	75% 	{ background-color: #fff2a9 }
 	100% 	{ background-color: inherit; }
 }
+
+.ti-pane {
+	float: right;
+	overflow: auto;
+	width: 47%;
+	height: 100%;
+}
+
+#ti-testCasesPane {
+	background-color: #a6a6a6;
+
+	.ti-scrollView {
+		padding-top: 6px;
+	}
+}
+
+.ti-testCase {
+	margin: 6px 12px; 
+	background-color: #f8f8f8;
+
+	padding-bottom: 4px;
+
+	.CodeMirror-lines {
+		padding: 0;
+	}
+
+	.CodeMirror-scroll {
+		// height: auto; 
+		overflow-y: hidden; 
+		overflow-x: auto;
+	}
+
+	.CodeMirror {
+		height: auto;
+	}
+}
+
+.ti-header {
+	border-bottom: 1px solid #d4d4d4;
+	font-family: "Lato";
+	font-size: 14px;
+
+	padding-left: 21px;
+	min-height: 46px;
+
+	margin-bottom: 4px;
+
+	position: relative;
+
+	.ti-headerLine, .ti-button {
+		position: absolute;
+		top: 50%; 
+		-webkit-transform: translateY(-50%);
+	}
+
+	.ti-button {
+		background-repeat: no-repeat;
+		background-size: 100%;
+
+		padding: 0;
+		margin: 0;
+
+		right: 10px;
+
+		width: 27px;
+		height: 27px;
+
+		display: inline-block;
+
+		&.ti-addButton {
+			background-image: url(./img/add-icon.svg);
+		}
+
+		&.ti-removeButton {
+			background-image: url(./img/remove-icon.svg);
+		}
+	}
+}
+
+.ti-testStatusIndicator {
+	display: inline-block;
+
+	width: 16px; 
+	height: 16px; 
+	border-radius: 50%; 
+
+	position: relative;
+	top: 3px;
+
+	background-color: #50aa14;
+	&.ti-testStatusFailed {
+		background-color: #c52622;
+	}
+}
+
+.ti-caption {
+	margin-left: 7px;
+}
+
+.ti-roundAddButton { 
+	display: block;
+
+	margin: 0 auto;
+	margin-top: 14px;
+
+	width: 66px;
+	height: 66px;
+	border-radius: 50%; 
+
+	background-color: #f8f8f8;
+	background-image: url(./img/add-icon.svg);
+	background-size: 39px;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+

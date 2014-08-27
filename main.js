@@ -15,6 +15,7 @@ define(function (require, exports, module) {
 	var JSUtils						= brackets.getModule("language/JSUtils");
 	var ScopeManagerExtensions 		= require("./src/ScopeManagerExtensions");
 	var SessionExtensions 			= require("./src/SessionExtensions");
+	var TestCasesPane				= require("./src/TestCasesPane");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
 	var TIUtils 					= require("./src/TIUtils");
@@ -24,6 +25,7 @@ define(function (require, exports, module) {
 	var inlineWidgetsByFunctionIdentifier = {};
 	var currentDocument; 
 	var hostEditor;
+	var testCasesPane;
 
 	function _init () {
 		TIUtils.log("loading... "); 
@@ -47,6 +49,8 @@ define(function (require, exports, module) {
 		_currentDocumentChange(null, DocumentManger.getCurrentDocument());
 
 		$(TypeInformationStore).on("didUpdateTypeInformation", _didUpdateTypeInformation); 
+
+		testCasesPane = new TestCasesPane();
 	}
 
 	/**
