@@ -6,6 +6,7 @@ define(function (require, exports, module) {
 
 	var Resizer 			= brackets.getModule("utils/Resizer");
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
+	var TestCaseWidget		= require("./TestCaseWidget");
 
 	function TestCasesPane () {
 		this.$pane = $(require("text!./templates/TestCasesPane.html"));
@@ -15,27 +16,12 @@ define(function (require, exports, module) {
 		this.$pane.insertBefore('#editor-holder > .CodeMirror');
 		$('#editor-holder > .CodeMirror').width("50%");
 
-		this.testCaseTemplate = require("text!./templates/testCase.html");
-
-		var $testTestCase = $(Mustache.render(this.testCaseTemplate, {
+		var testTestCaseWidget = new TestCaseWidget({
 			title: "This is a test case", 
 			isSuggestion: false
-		}));
-
-		var $localEditorHolder = $testTestCase.find(".ti-editorHolder");
-		this.codeMirror = new CodeMirror(function (element) {
-			$localEditorHolder.html(element);
-		}, {
-			mode: "javascript",
-            theme: "default",
-            lineNumbers: true,
-            lineWrapping: true,
-			value: require("text!./TestCasesPane.js")
 		});
 
-		setTimeout(this.codeMirror.refresh.bind(this.codeMirror), 1);
-		
-		this.$scollView.prepend($testTestCase); 
+		this.$scollView.prepend(testTestCaseWidget.$container); 
 	}
 
 	TestCasesPane.prototype.constructor = TestCasesPane; 
