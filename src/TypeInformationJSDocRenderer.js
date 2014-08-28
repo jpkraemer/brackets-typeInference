@@ -61,7 +61,7 @@ define(function (require, exports, module) {
 	 * @return {TypeInformation}
 	 */
 	function updateTypeInformationWithJSDoc (typeInformation, jsdocString) {
-		var jsdoc = doctrine.parse(jsdocString);
+		var jsdoc = doctrine.parse(jsdocString, { recoverable: true });
 
 		typeInformation.description = jsdoc.description === null ? undefined : jsdoc.description; 
 
