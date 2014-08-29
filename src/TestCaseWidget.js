@@ -12,14 +12,13 @@ define(function (require, exports, module) {
 	 * @constructor
 	 * Renders a single test case. 
 	 * @param {{title: string, isSuggestion: boolean}} options
-	 * @param {Function} initializationDoneCallback called after the code mirror instance was properly initialized
 	 */
-	function TestCaseWidget (options, initializationDoneCallback) {
+	function TestCaseWidget (options) {
 		_.bindAll(this);
 
 		var testCaseTemplate = require("text!./templates/testCase.html");
 
-		this.$container = $(Mustache.render(testCaseTemplate, options));
+		this._$container = $(Mustache.render(testCaseTemplate, options));
 
 		var $localEditorHolder = this.$container.find(".ti-editorHolder");
 		this.codeMirror = new CodeMirror(function (element) {
@@ -31,12 +30,47 @@ define(function (require, exports, module) {
             lineWrapping: true,
 			value: require("text!./TestCasesPane.js")
 		});
+
+		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
+
+		this.isSuggestion = options.isSuggestion;
 	}
 
 	TestCaseWidget.prototype.constructor = TestCaseWidget; 
 
-	TestCaseWidget.prototype.codeMirror = undefined;
-	TestCaseWidget.prototype.$container = undefined;
+	Object.defineProperties(TestCaseWidget.prototype, {
+		"$container": {
+			get: function () { return this._$container; },
+			set: function () { throw new Error("Cannot set $container"); }
+		},
+		"$addRemoveButton": {
+			get: function () { return this.$container.find('.ti-button'); },
+			set: function () { throw new Error("Cannot set $addRemoveButton"); }
+		},
+		"isSuggestion": {
+			get: function () { return this._isSuggestion; },
+			set: function (value) {
+				if (this._isSuggestion === value) {
+					return; 
+				}
+
+				this._isSuggestion = value;
+				if (this._isSuggestion === true) {
+					this.$container.addClass('ti-suggestion');
+					this.$addRemoveButton.removeClass('ti-removeButton');
+					this.$addRemoveButton.addClass('ti-addButton');
+				} else {
+					this.$container.removeClass('ti-suggestion');
+					this.$addRemoveButton.removeClass('ti-addButton');
+					this.$addRemoveButton.addClass('ti-removeButton');
+				}
+			}
+		}
+	});
+
+	TestCaseWidget.prototype.codeMirror 	= undefined;
+	TestCaseWidget.prototype._$container 	= undefined;
+	TestCaseWidget.prototype._isSuggestion 	= undefined;
 
 	TestCaseWidget.prototype.insertBefore = function(element) {
 		this.$container.height(0); 
@@ -62,6 +96,12 @@ define(function (require, exports, module) {
 		setTimeout(function () {
 			this.codeMirror.refresh();
 		}.bind(this), 1);
+	};
+
+	TestCaseWidget.prototype.toggleSourceCodeVisible = function(event) {
+		// this.$container.height(this.$container.outerHeight());
+
+		this.$container.find('.ti-editorHolder').slideToggle('slow');
 	};
 
 	module.exports = TestCaseWidget;  

@@ -160,33 +160,14 @@ a.ti-alert {
 	background-color: #f8f8f8;
 
 	overflow: hidden;
-
-	padding-bottom: 4px;
-
-	.CodeMirror-lines {
-		padding: 0;
-	}
-
-	.CodeMirror-scroll {
-		// height: auto; 
-		overflow-y: hidden; 
-		overflow-x: auto;
-	}
-
-	.CodeMirror {
-		height: auto;
-	}
 }
 
 .ti-header {
-	border-bottom: 1px solid #d4d4d4;
 	font-family: "Lato";
 	font-size: 14px;
 
 	padding-left: 21px;
 	min-height: 46px;
-
-	margin-bottom: 4px;
 
 	position: relative;
 
@@ -258,4 +239,32 @@ a.ti-alert {
 	background-repeat: no-repeat;
 }
 
+.ti-editorHolder {
+	border-top: 1px solid #d4d4d4;
 
+	padding: 4px 0;
+
+	.CodeMirror-lines {
+		padding: 0;
+	}
+
+	.CodeMirror-scroll {
+		// height: auto; 
+		overflow-y: hidden; 
+		overflow-x: auto;
+	}
+
+	.CodeMirror {
+		height: auto;
+	}
+}
+
+.ti-suggestion {
+	&, .CodeMirror-scroll, .CodeMirror-gutter {
+		background-color: #e0e0e0;
+	}
+
+	.ti-header {
+		color: #565656;
+	}
+}
