@@ -65,6 +65,10 @@ define(function (require, exports, module) {
 					this.$addRemoveButton.addClass('ti-removeButton');
 				}
 			}
+		},
+		"testCase": {
+			get: function () { return this._testCase; },
+			set: function (newTestCase) { this._testCase = newTestCase; }
 		}
 	});
 
