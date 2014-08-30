@@ -30,9 +30,6 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.$scollView = undefined;
 	TestCasesPane.prototype.codeMirror = undefined;
 
-	TestCasesPane.prototype.testCaseTemplate = undefined; 
-
-
 	TestCasesPane.prototype.addTestButtonClicked = function(event) {
 		var newWidget = new TestCaseWidget({
 			title: "This is a test case", 
@@ -45,7 +42,6 @@ define(function (require, exports, module) {
 			event.stopPropagation();
 		}
 	};
-
 
 	module.exports = TestCasesPane;  
 });
