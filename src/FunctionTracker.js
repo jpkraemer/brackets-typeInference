@@ -48,6 +48,20 @@ define(function (require, exports, module) {
 		return _.cloneDeep(untrackedFunctions);
 	}
 
+	function functionIdAtLocationInDocument(loc, document, skipAnonymous) {
+		if (skipAnonymous === undefined) {
+			skipAnonymous = true;
+		}
+
+		var searchFunctions = skipAnonymous ? _.pick(trackedFunctions, function (value) { 
+				return value.functionName !== undefined;
+			}) : trackedFunctions;
+
+		return _.findKey(searchFunctions, function (aFunction) {
+			return _rangeContainsRange(aFunction.functionRange, { start: loc, end: loc });
+		});
+	}
+
 	function _currentDocumentChanged (event, currentDocument, previousDocument) {
 		if (referencedEditor !== undefined) {
 			$(referencedEditor).off(EVENT_NAMESPACE);
@@ -263,4 +277,5 @@ define(function (require, exports, module) {
 	exports.functionLocationsInCurrentDocument = functionLocationsInCurrentDocument; 
 	exports.functionLocationForFunctionIdentifier = functionLocationForFunctionIdentifier;
 	exports.functionLocationsWithoutIdInCurrentDocument = functionLocationsWithoutIdInCurrentDocument;
+	exports.functionIdAtLocationInDocument = functionIdAtLocationInDocument;
 });

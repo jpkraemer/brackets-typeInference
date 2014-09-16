@@ -102,6 +102,10 @@ define(function (require, exports, module) {
 		}.bind(this), 1);
 	};
 
+	TestCaseWidget.prototype.remove = function() {
+		this.$container.remove();
+	};
+
 	TestCaseWidget.prototype.toggleSourceCodeVisible = function(event) {
 		// this.$container.height(this.$container.outerHeight());
 
