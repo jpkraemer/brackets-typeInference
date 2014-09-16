@@ -98,7 +98,16 @@ define(function (require, exports, module) {
 								var testFunctionLocation = node.expression.arguments[1].loc; 
 								var testFunctionLines = testSourceCodeLines.slice(testFunctionLocation.start.line - 1, testFunctionLocation.end.line);
 								testFunctionLines[0] = testFunctionLines[0].substr(testFunctionLocation.start.column); 
+								for (var i = 1; i < testFunctionLines.length - 1; i++) {
+									if (/^\s*$/.test(testFunctionLines[i].substr(0, node.loc.start.column))) {
+										testFunctionLines[i] = testFunctionLines[i].substr(node.loc.start.column);
+									}
+								}
 								testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(0, testFunctionLocation.end.column);
+								if (/^\s*$/.test(testFunctionLines[testFunctionLines.length - 1].substr(0, node.loc.start.column))) {
+									testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(node.loc.start.column);
+								}
+
 
 								var testCaseId = node.leadingComments[0].value; 
 								var testCaseIdMatches = testCaseId.match(/@testId (\S+)/); 
@@ -108,7 +117,7 @@ define(function (require, exports, module) {
 									id: testCaseId,
 									functionIdentifier: functionIdentifier,
 									title: node.expression.arguments[0].value,
-									testFunction: testFunctionLines.join("\n")
+									code: testFunctionLines.join("\n")
 								};
 
 								testCasesByFunctionIdentifier[functionIdentifier].push(testCase);
@@ -133,8 +142,8 @@ define(function (require, exports, module) {
 		});
 	}
 
-	function _saveTestCasesForPath (fullPath) {
-		var testCases = testCasesForProject[fullPath]; 
+	function _saveTestCases () {
+		var testCases = testCasesForCurrentDocument;
 		var resultAst = {
 		    type: "Program",
 		    body: _.map(testCases, function (testCasesForFunctionIdentifier, functionIdentifier) {
@@ -181,7 +190,7 @@ define(function (require, exports, module) {
 						                        	type: "BlockStatement",
 						                        	body: [],
 						                        	xVerbatimProperty: {
-						                            	content: testCase.testFunction || "",
+						                            	content: testCase.code || "",
 						                            	precedence: Escodegen.Precedence.Primary
 						                            }
 					                        	},
@@ -204,7 +213,7 @@ define(function (require, exports, module) {
 
 		var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty" }); 
 
-		_getTestCaseFileForPath(fullPath, true).done(function (file) {
+		_getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath, true).done(function (file) {
 			file.write(code);
 		}); 
 		
@@ -248,7 +257,7 @@ define(function (require, exports, module) {
 
 		testCasesForFunctionIdentifier.push(testCase);
 
-		_saveTestCasesForPath(fullPath);
+		_saveTestCases();
 
 		return testCase;
 	}
@@ -259,7 +268,7 @@ define(function (require, exports, module) {
 			throw new Error("Could not update test case, no test case exists for id " + newTestCase.id);
 		} else { 
 			_.assign(testCase, newTestCase);
-			_saveTestCasesForPath(DocumentManager.getCurrentDocument().file.fullPath);
+			_saveTestCases();
 		}
 	}
 

@@ -13,12 +13,12 @@ define(function (require, exports, module) {
 	 * Renders a single test case. 
 	 * @param {{title: string, isSuggestion: boolean}} options
 	 */
-	function TestCaseWidget (options) {
+	function TestCaseWidget (testCase) {
 		_.bindAll(this);
 
 		var testCaseTemplate = require("text!./templates/testCase.html");
 
-		this._$container = $(Mustache.render(testCaseTemplate, options));
+		this._$container = $(Mustache.render(testCaseTemplate, testCase));
 
 		var $localEditorHolder = this.$container.find(".ti-editorHolder");
 		this.codeMirror = new CodeMirror(function (element) {
@@ -28,12 +28,12 @@ define(function (require, exports, module) {
             theme: "default",
             lineNumbers: true,
             lineWrapping: true,
-			value: require("text!./TestCasesPane.js")
+			value: testCase.code
 		});
 
 		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
 
-		this.isSuggestion = options.isSuggestion;
+		this.isSuggestion = testCase.isSuggestion;
 	}
 
 	TestCaseWidget.prototype.constructor = TestCaseWidget; 
