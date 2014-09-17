@@ -7,6 +7,7 @@ define(function (require, exports, module) {
 	var _ 					= require("./lib/lodash");
 	var Resizer 			= brackets.getModule("utils/Resizer");
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
+	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
 
 	/**
 	 * @constructor
@@ -16,8 +17,9 @@ define(function (require, exports, module) {
 	function TestCaseWidget (testCase) {
 		_.bindAll(this);
 
-		var testCaseTemplate = require("text!./templates/testCase.html");
+		this.testCase = testCase;
 
+		var testCaseTemplate = require("text!./templates/testCase.html");
 		this._$container = $(Mustache.render(testCaseTemplate, testCase));
 
 		var $localEditorHolder = this.$container.find(".ti-editorHolder");
@@ -30,6 +32,8 @@ define(function (require, exports, module) {
             lineWrapping: true,
 			value: testCase.code
 		});
+
+		this.codeMirror.on("changes", this.codeMirrorDidChange);
 
 		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
 
@@ -67,7 +71,12 @@ define(function (require, exports, module) {
 			}
 		},
 		"testCase": {
-			get: function () { return this._testCase; },
+			get: function () { 
+				this._testCase.code = this.codeMirror.getValue();
+				this._testCase.title = this.$container.find(".ti-caption").text();
+
+				return this._testCase; 
+			},
 			set: function (newTestCase) { this._testCase = newTestCase; }
 		}
 	});
@@ -75,6 +84,10 @@ define(function (require, exports, module) {
 	TestCaseWidget.prototype.codeMirror 	= undefined;
 	TestCaseWidget.prototype._$container 	= undefined;
 	TestCaseWidget.prototype._isSuggestion 	= undefined;
+
+	TestCaseWidget.prototype.codeMirrorDidChange = function() {
+		DocumentManager.getCurrentDocument().isDirty = true;
+	};
 
 	TestCaseWidget.prototype.insertBefore = function(element) {
 		this.$container.height(0); 

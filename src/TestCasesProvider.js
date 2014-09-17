@@ -182,24 +182,18 @@ define(function (require, exports, module) {
 						                        value: testCase.title,
 						                    },
 						                    {
-						                        type: "FunctionExpression",
-						                        id: null,
-						                        params: [],
-						                        defaults: [],
-						                        body: {
-						                        	type: "BlockStatement",
-						                        	body: [],
-						                        	xVerbatimProperty: {
-						                            	content: testCase.code || "",
-						                            	precedence: Escodegen.Precedence.Primary
-						                            }
-					                        	},
-						                        rest: null,
-						                        generator: false,
-						                        expression: false
+					                        	type: "Literal",
+					                        	xVerbatimProperty: {
+					                            	content: testCase.code || "",
+					                            	precedence: Escodegen.Precedence.Primary
+					                            }
 						                    }
 						                ]
-						            }
+						            },
+						            leadingComments: [ {
+						            	type: "Block", 
+						            	value: "*\n * @testId " + testCase.id + "\n"
+						            } ]
 						        };})
 	                        },
 	                        rest: null,
@@ -211,7 +205,7 @@ define(function (require, exports, module) {
 	        };})
 		};
 
-		var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty" }); 
+		var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 
 
 		_getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath, true).done(function (file) {
 			file.write(code);
@@ -236,7 +230,7 @@ define(function (require, exports, module) {
 	}
 
 	function getTestCaseForFunctionIdentifierAndTestCaseId (functionIdentifier, testCaseId) {
-		return _.find(getTestCasesForFunctionIdentifier(functionIdentifier), { name: testCaseId }); 
+		return _.find(getTestCasesForFunctionIdentifier(functionIdentifier), { id: testCaseId }); 
 	}
 
 	function addTestCaseForPath (testCase, fullPath) {
@@ -262,19 +256,27 @@ define(function (require, exports, module) {
 		return testCase;
 	}
 
-	function updateTestCaseForFunctionIdentifier (functionIdentifier, newTestCase) {
-		var testCase = getTestCaseForFunctionIdentifierAndTestCaseId(functionIdentifier, newTestCase.id);
-		if (testCase === undefined) {
-			throw new Error("Could not update test case, no test case exists for id " + newTestCase.id);
-		} else { 
-			_.assign(testCase, newTestCase);
-			_saveTestCases();
+	function updateTestCase (newTestCases) {
+		if (! Array.isArray(newTestCases)) {
+			newTestCases = [ newTestCases ];
 		}
+
+		for (var i = 0; i < newTestCases.length; i++) {
+			var newTestCase = newTestCases[i];
+			var testCase = getTestCaseForFunctionIdentifierAndTestCaseId(newTestCase.functionIdentifier, newTestCase.id);
+			if (testCase === undefined) {
+				throw new Error("Could not update test case, no test case exists for id " + newTestCase.id);
+			} else { 
+				_.assign(testCase, newTestCase);
+			}
+		}
+
+		_saveTestCases();
 	}
 
 	exports.init = init;
 	exports.getTestCasesForFunctionIdentifier = getTestCasesForFunctionIdentifier; 
 	exports.getTestCaseForFunctionIdentifierAndTestCaseId = getTestCasesForFunctionIdentifier; 
 	exports.addTestCaseForPath = addTestCaseForPath; 
-	exports.updateTestCaseForFunctionIdentifier = updateTestCaseForFunctionIdentifier;
+	exports.updateTestCase = updateTestCase;
 });

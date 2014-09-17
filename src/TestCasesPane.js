@@ -23,6 +23,8 @@ define(function (require, exports, module) {
 		$(DocumentManager).on("currentDocumentChange", this.currentDocumentChanged); 
 		this.currentDocumentChanged(null, DocumentManager.getCurrentDocument());
 
+		$(DocumentManager).on("documentSaved", this.documentSaved);
+
 		$(TestCasesProvider).on("didLoadTestsForCurrentDocument", this._update);
 
 		this.$pane = $(require("text!./templates/TestCasesPane.html"));
@@ -55,6 +57,14 @@ define(function (require, exports, module) {
 		
 		if (event !== undefined) {
 			event.stopPropagation();
+		}
+	};
+
+	TestCasesPane.prototype.documentSaved = function(event, doc) {
+		if (DocumentManager.getCurrentDocument() === doc) {
+			TestCasesProvider.updateTestCase(_.map(this.widgets, function(widget) {
+				return widget.testCase;
+			}));
 		}
 	};
 
