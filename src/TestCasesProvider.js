@@ -9,10 +9,13 @@ define(function (require, exports, module) {
 	var DocumentManager 		= brackets.getModule("document/DocumentManager");
 	var Esprima					= require("./node/node_modules/esprima/esprima");
 	var Escodegen				= require("./lib/escodegen");
+	var ExtensionUtils 			= brackets.getModule("utils/ExtensionUtils");
 	var File 					= brackets.getModule("filesystem/File");
 	var FileSystem				= brackets.getModule("filesystem/FileSystem");
 	var FileUtils				= brackets.getModule("file/FileUtils");
+	var NodeDomain 				= brackets.getModule("utils/NodeDomain");
 	var ProjectManager 			= brackets.getModule("project/ProjectManager");
+	var TITestRunner			= new NodeDomain("TITestRunner", ExtensionUtils.getModulePath(module, "node/TITestRunnerDomain"));
 	var TIUtils					= require("./TIUtils");
 
 	var testCasesForCurrentDocument = {};
@@ -20,6 +23,13 @@ define(function (require, exports, module) {
 	function init () {
 		$(DocumentManager).on("currentDocumentChange", _currentDocumentChanged); 
 		_currentDocumentChanged();
+
+		var $button = $("<a />").attr({
+			id: "ti-runTests-toolbar-button",
+			href: "#"
+		}); 
+		$button.on("click", runTests);
+		$('#main-toolbar .buttons').append($button); 
 	}
 
 	function _currentDocumentChanged () {
@@ -210,19 +220,17 @@ define(function (require, exports, module) {
 		_getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath, true).done(function (file) {
 			file.write(code);
 		}); 
-		
-		// file.exists(function (err, exists) {
-		// 	if (!exists) {
+	}
 
-		// 	}
-		// });
+	function runTests () {
+		var testCaseFile = _getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath);
+		var testCaseDir = FileUtils.getDirectoryPath(testCaseFile.fullPath); 
 
-		// var document = DocumentManager.getDocumentForPath(file.fullPath).done(function (document) {
-		// 	document.setText(code); 
-		// 	DocumentCommandHandlers.doSave(document);
-		// }).fail(function (err) {
-		// 	console.log(err);
-		// });
+		TITestRunner.exec("runTestsInPath", testCaseDir).done(function (result) {
+			TIUtils.log(JSON.stringify(result)); 
+		}).fail(function (err) {
+			TIUtils.log(err);
+		}); 
 	}
 
 	function getTestCasesForFunctionIdentifier (functionIdentifier) {
