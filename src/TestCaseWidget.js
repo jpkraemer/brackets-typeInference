@@ -8,6 +8,7 @@ define(function (require, exports, module) {
 	var Resizer 			= brackets.getModule("utils/Resizer");
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
+	var TestCasesProvider	= require("./TestCasesProvider");
 
 	/**
 	 * @constructor
@@ -18,6 +19,7 @@ define(function (require, exports, module) {
 		_.bindAll(this);
 
 		this.testCase = testCase;
+		$(TestCasesProvider).on("updatedTestResults", this.didUpdateTestResults);
 
 		var testCaseTemplate = require("text!./templates/testCase.html");
 		this._$container = $(Mustache.render(testCaseTemplate, testCase));
@@ -123,6 +125,20 @@ define(function (require, exports, module) {
 		// this.$container.height(this.$container.outerHeight());
 
 		this.$container.find('.ti-editorHolder').slideToggle('slow');
+	};
+
+	TestCaseWidget.prototype.didUpdateTestResults = function(event, results) {
+		if (results[this.testCase.functionIdentifier]) {
+			var testResult = _.find(results[this.testCase.functionIdentifier], { title: this.testCase.title });
+			if (testResult !== undefined) {
+				var $statusIndicator = this.$container.find(".ti-testStatusIndicator");
+				if (testResult.success) {
+					$statusIndicator.removeClass('ti-testStatusFailed');
+				} else {
+					$statusIndicator.addClass('ti-testStatusFailed');
+				}
+			}
+		}
 	};
 
 	module.exports = TestCaseWidget;  

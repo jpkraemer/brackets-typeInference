@@ -9,10 +9,10 @@
 	var path 	= require("path");
 	var vm		= require("vm");
 	var xml2js	= require("xml2js");
-	var jasmine = require("jasmine-node/lib/jasmine-node/index"); 
+	
 
-	function runTestsInPath (fullPath, errback) {
-		var onComplete = function (runner, log) {
+	function runTestsInPath (jasminePath, fullPath, errback) {
+		var onComplete = function (err, stdout, stderr) {
 			var result = {};
 			if (fs.existsSync(reportPath) && (fs.statSync(reportPath).isDirectory())) {
 				var files = fs.readdirSync(reportPath);
@@ -57,25 +57,7 @@
 
 		if (fs.existsSync(fullPath) && (fs.statSync(fullPath).isDirectory())) {
 			var reportPath = path.join(fullPath, "/reports/");
-			if (! fs.existsSync(reportPath)) {
-				fs.mkdirSync(reportPath);
-			}
-
-			var options = {
-				specFolders: [ fullPath ],
-				onComplete: onComplete,
-				isVerbose: false,
-				junitreport: {
-					report: true,
-					savePath: reportPath,
-					useDotNotation: true,
-					consolidate: true
-				},
-				includeStackTrace: true,
-				growl: false
-			};
-
-			jasmine.executeSpecsInFolder(options);
+			exec(process.execPath + " " + jasminePath + " --junitreport --output " + reportPath + " " + fullPath, onComplete);
 		}
 	}
 

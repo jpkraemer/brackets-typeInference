@@ -225,9 +225,10 @@ define(function (require, exports, module) {
 	function runTests () {
 		var testCaseFile = _getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath);
 		var testCaseDir = FileUtils.getDirectoryPath(testCaseFile.fullPath); 
+		var jasminePath = ExtensionUtils.getModulePath(module, "node/node_modules/jasmine-node/lib/jasmine-node/cli.js");
 
-		TITestRunner.exec("runTestsInPath", testCaseDir).done(function (result) {
-			TIUtils.log(JSON.stringify(result)); 
+		TITestRunner.exec("runTestsInPath", jasminePath, testCaseDir).done(function (result) {
+			$(exports).trigger("updatedTestResults", result);
 		}).fail(function (err) {
 			TIUtils.log(err);
 		}); 
