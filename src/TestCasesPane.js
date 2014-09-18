@@ -50,6 +50,7 @@ define(function (require, exports, module) {
 		var newWidget = new TestCaseWidget(TestCasesProvider.addTestCaseForPath({
 			functionIdentifier: this.functionIdentifier,
 			title: "This is a test case", 
+			code: "function () {\n\n}",
 			isSuggestion: false
 		}, this.currentFullEditor.document.file.fullPath));
 
