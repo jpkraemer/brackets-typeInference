@@ -79,9 +79,25 @@ define(function (require, exports, module) {
 		var result = $.Deferred();
 
 		DocumentManager.getDocumentText(file).done(function (testSourceCode) {
-				
+		
+			var extractCodeFromLocation = function (node, location) {
+				var lines = testSourceCodeLines.slice(location.start.line - 1, location.end.line);
+				lines[0] = lines[0].substr(location.start.column); 
+				for (var i = 1; i < lines.length - 1; i++) {
+					if (/^\s*$/.test(lines[i].substr(0, node.loc.start.column))) {
+						lines[i] = lines[i].substr(node.loc.start.column);
+					}
+				}
+				lines[lines.length - 1] = lines[lines.length - 1].substr(0, location.end.column);
+				if (/^\s*$/.test(lines[lines.length - 1].substr(0, node.loc.start.column))) {
+					lines[lines.length - 1] = lines[lines.length - 1].substr(node.loc.start.column);
+				}
+
+				return lines.join("\n");
+			};
+
 			var testSourceCodeLines = testSourceCode.split("\n");
-			var testCasesByFunctionIdentifier = {}; 
+			var testSuites = {}; 
 
 			try {
 				var testAst = Esprima.parse(testSourceCode, {
@@ -98,43 +114,54 @@ define(function (require, exports, module) {
 						(node.expression.callee.name === "describe")) {
 
 						var functionIdentifier = node.expression.arguments[0].value;
-						testCasesByFunctionIdentifier[functionIdentifier] = [];
+						testSuites[functionIdentifier] = {
+							tests: []
+						};
 						var individualTestsAst = node.expression.arguments[1].body.body; 
 
 						_.forEach(individualTestsAst, function (node) {
-							if ((node.type === "ExpressionStatement") && 
-								(node.expression.type === "CallExpression") &&
-								(node.expression.callee.name === "it")) {
+							var i;
 
-								var testFunctionLocation = node.expression.arguments[1].loc; 
-								var testFunctionLines = testSourceCodeLines.slice(testFunctionLocation.start.line - 1, testFunctionLocation.end.line);
-								testFunctionLines[0] = testFunctionLines[0].substr(testFunctionLocation.start.column); 
-								for (var i = 1; i < testFunctionLines.length - 1; i++) {
-									if (/^\s*$/.test(testFunctionLines[i].substr(0, node.loc.start.column))) {
-										testFunctionLines[i] = testFunctionLines[i].substr(node.loc.start.column);
+							if ((node.type === "ExpressionStatement") && (node.expression.type === "CallExpression")) {
+								if (node.expression.callee.name === "it") {
+									var testFunctionLocation = node.expression.arguments[1].loc; 
+									var testFunctionLines = testSourceCodeLines.slice(testFunctionLocation.start.line - 1, testFunctionLocation.end.line);
+									testFunctionLines[0] = testFunctionLines[0].substr(testFunctionLocation.start.column); 
+									for (i = 1; i < testFunctionLines.length - 1; i++) {
+										if (/^\s*$/.test(testFunctionLines[i].substr(0, node.loc.start.column))) {
+											testFunctionLines[i] = testFunctionLines[i].substr(node.loc.start.column);
+										}
 									}
+									testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(0, testFunctionLocation.end.column);
+									if (/^\s*$/.test(testFunctionLines[testFunctionLines.length - 1].substr(0, node.loc.start.column))) {
+										testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(node.loc.start.column);
+									}
+
+									var literalTestCaseNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
+
+									var testCase = {
+										id: literalTestCaseNameComponents[0],
+										functionIdentifier: functionIdentifier,
+										title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
+										code: extractCodeFromLocation(node, node.expression.arguments[1].loc)
+									};
+
+									testSuites[functionIdentifier].tests.push(testCase);
+								} else if (node.expression.callee.name === "beforeEach") {
+									testSuites[functionIdentifier].beforeEach = {
+										code: extractCodeFromLocation(node, node.expression.arguments[0].loc)
+									};
+								} else if (node.expression.callee.name === "afterEach") {
+									testSuites[functionIdentifier].afterEach = {
+										code: extractCodeFromLocation(node, node.expression.arguments[0].loc)
+									};
 								}
-								testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(0, testFunctionLocation.end.column);
-								if (/^\s*$/.test(testFunctionLines[testFunctionLines.length - 1].substr(0, node.loc.start.column))) {
-									testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(node.loc.start.column);
-								}
-
-								var literalTestCaseNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
-
-								var testCase = {
-									id: literalTestCaseNameComponents[0],
-									functionIdentifier: functionIdentifier,
-									title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
-									code: testFunctionLines.join("\n")
-								};
-
-								testCasesByFunctionIdentifier[functionIdentifier].push(testCase);
 							}
 						});
 					}
 				});
 
-				result.resolve(testCasesByFunctionIdentifier);
+				result.resolve(testSuites);
 			} catch (e) {
 				TIUtils.log("Invalid contents of generated test file.");
 				throw e;
@@ -151,62 +178,107 @@ define(function (require, exports, module) {
 	}
 
 	function _saveTestCases () {
-		var testCases = testCasesForCurrentDocument;
 		var resultAst = {
 		    type: "Program",
-		    body: _.map(testCases, function (testCasesForFunctionIdentifier, functionIdentifier) {
-				return {
-	            type: "ExpressionStatement",
-	            expression: {
-	                type: "CallExpression",
-	                callee: {
-	                    type: "Identifier",
-	                    name: "describe"
-	                },
-	                arguments: [
-	                    {
-	                        type: "Literal",
-	                        value: functionIdentifier,
-	                    },
-	                    {
-	                        type: "FunctionExpression",
-	                        id: null,
-	                        params: [],
-	                        defaults: [],
-	                        body: {
-	                            type: "BlockStatement",
-	                            body: _.map(testCasesForFunctionIdentifier, function (testCase) {
-					        		return {
-						            type: "ExpressionStatement",
-						            expression: {
-						                type: "CallExpression",
-						                callee: {
-						                    type: "Identifier",
-						                    name: "it"
-						                },
-						                arguments: [
-						                    {
-						                        type: "Literal",
-						                        value: testCase.id + SEPARATOR + testCase.title,
-						                    },
-						                    {
-					                        	type: "Literal",
-					                        	xVerbatimProperty: {
-					                            	content: testCase.code || "",
-					                            	precedence: Escodegen.Precedence.Primary
-					                            }
-						                    }
-						                ]
-						            }
-						        };})
-	                        },
-	                        rest: null,
-	                        generator: false,
-	                        expression: false
-	                    }
-	                ]
-	            }
-	        };})
+		    body: _.map(testCasesForCurrentDocument, function (testSuite, functionIdentifier) {
+				var result = {
+		            type: "ExpressionStatement",
+		            expression: {
+		                type: "CallExpression",
+		                callee: {
+		                    type: "Identifier",
+		                    name: "describe"
+		                },
+		                arguments: [
+		                    {
+		                        type: "Literal",
+		                        value: functionIdentifier,
+		                    },
+		                    {
+		                        type: "FunctionExpression",
+		                        id: null,
+		                        params: [],
+		                        defaults: [],
+		                        body: {
+		                            type: "BlockStatement",
+		                            body: _.map(testSuite.tests, function (testCase) {
+						        		return {
+							            type: "ExpressionStatement",
+							            expression: {
+							                type: "CallExpression",
+							                callee: {
+							                    type: "Identifier",
+							                    name: "it"
+							                },
+							                arguments: [
+							                    {
+							                        type: "Literal",
+							                        value: testCase.id + SEPARATOR + testCase.title,
+							                    },
+							                    {
+						                        	type: "Literal",
+						                        	xVerbatimProperty: {
+						                            	content: testCase.code || "",
+						                            	precedence: Escodegen.Precedence.Primary
+						                            }
+							                    }
+							                ]
+							            }
+							        };})
+		                        },
+		                        rest: null,
+		                        generator: false,
+		                        expression: false
+		                    }
+		                ]
+		            }
+		        };
+
+		        if (testSuite.beforeEach) {
+					result.expression.arguments[1].body.push({
+						type: "ExpressionStatement",
+						expression: {
+							type: "CallExpression",
+							callee: {
+								type: "Identifier",
+								name: "beforeEach"
+							},
+							arguments: [
+							{
+								type: "Literal",
+								xVerbatimProperty: {
+									content: testSuite.beforeEach.code || "",
+									precedence: Escodegen.Precedence.Primary
+								}
+							}
+							]
+						}
+					});
+		        }
+		        
+		        if (testSuite.afterEach) {
+					result.expression.arguments[1].body.push({
+						type: "ExpressionStatement",
+						expression: {
+							type: "CallExpression",
+							callee: {
+								type: "Identifier",
+								name: "beforeEach"
+							},
+							arguments: [
+							{
+								type: "Literal",
+								xVerbatimProperty: {
+									content: testSuite.afterEach.code || "",
+									precedence: Escodegen.Precedence.Primary
+								}
+							}
+							]
+						}
+					});
+		        }
+		        return result;
+	        })
 		};
 
 		var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 

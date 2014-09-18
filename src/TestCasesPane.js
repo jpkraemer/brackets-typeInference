@@ -98,7 +98,11 @@ define(function (require, exports, module) {
 		}); 
 		this.widgets = [];
 
-		var testCases = TestCasesProvider.getTestCasesForFunctionIdentifier(this.functionIdentifier) || [];
+		var testSuite = TestCasesProvider.getTestCasesForFunctionIdentifier(this.functionIdentifier);
+		var testCases = [];
+		if (testSuite && testSuite.tests) {
+			testCases = testSuite.tests;
+		}
 		for (var i = 0; i < testCases.length; i++) {
 			var testCase = testCases[i];
 			var widget = new TestCaseWidget(testCase); 
