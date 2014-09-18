@@ -129,7 +129,7 @@ define(function (require, exports, module) {
 
 	TestCaseWidget.prototype.didUpdateTestResults = function(event, results) {
 		if (results[this.testCase.functionIdentifier]) {
-			var testResult = _.find(results[this.testCase.functionIdentifier], { title: this.testCase.title });
+			var testResult = _.find(results[this.testCase.functionIdentifier], { id: this.testCase.id });
 			if (testResult !== undefined) {
 				var $statusIndicator = this.$container.find(".ti-testStatusIndicator");
 				if (testResult.success) {

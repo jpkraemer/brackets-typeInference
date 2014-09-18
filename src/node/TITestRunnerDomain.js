@@ -10,6 +10,8 @@
 	var vm		= require("vm");
 	var xml2js	= require("xml2js");
 	
+	var SEPARATOR = "$$";
+
 
 	function runTestsInPath (jasminePath, fullPath, errback) {
 		var onComplete = function (err, stdout, stderr) {
@@ -28,8 +30,10 @@
 
 							for (var k = 0; k < testsuite.testcase.length; k++) {
 								var testcase = testsuite.testcase[k];
+								var testcaseNameComponents = testcase.$.name.split(SEPARATOR); 
 								var newTestResult = {
-									title: testcase.$.name,
+									id: testcaseNameComponents[0],
+									title: testcaseNameComponents.slice(1).join(SEPARATOR),
 									time: testcase.$.time,
 									success: ! testcase.hasOwnProperty("failure")
 								};

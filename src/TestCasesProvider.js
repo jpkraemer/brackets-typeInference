@@ -19,6 +19,7 @@ define(function (require, exports, module) {
 	var TIUtils					= require("./TIUtils");
 
 	var testCasesForCurrentDocument = {};
+	var SEPARATOR = "$$";
 
 	function init () {
 		$(DocumentManager).on("currentDocumentChange", _currentDocumentChanged); 
@@ -118,15 +119,12 @@ define(function (require, exports, module) {
 									testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(node.loc.start.column);
 								}
 
-
-								var testCaseId = node.leadingComments[0].value; 
-								var testCaseIdMatches = testCaseId.match(/@testId (\S+)/); 
-								testCaseId = testCaseIdMatches[1];
+								var literalTestCaseNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
 
 								var testCase = {
-									id: testCaseId,
+									id: literalTestCaseNameComponents[0],
 									functionIdentifier: functionIdentifier,
-									title: node.expression.arguments[0].value,
+									title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
 									code: testFunctionLines.join("\n")
 								};
 
@@ -189,7 +187,7 @@ define(function (require, exports, module) {
 						                arguments: [
 						                    {
 						                        type: "Literal",
-						                        value: testCase.title,
+						                        value: testCase.id + SEPARATOR + testCase.title,
 						                    },
 						                    {
 					                        	type: "Literal",
@@ -199,11 +197,7 @@ define(function (require, exports, module) {
 					                            }
 						                    }
 						                ]
-						            },
-						            leadingComments: [ {
-						            	type: "Block", 
-						            	value: "*\n * @testId " + testCase.id + "\n"
-						            } ]
+						            }
 						        };})
 	                        },
 	                        rest: null,
