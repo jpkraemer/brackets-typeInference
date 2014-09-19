@@ -67,14 +67,19 @@ define(function (require, exports, module) {
 
 	TestCasesPane.prototype.documentSaved = function(event, doc) {
 		if (DocumentManager.getCurrentDocument() === doc) { 
-			TestCasesProvider.updateTestCase(
-				_(this.widget).filter(function (widget) {
-					return widget.hasOwnProperty("testCase");
-				}).map(function(widget) {
-					return widget.testCase;
-				})
-			);
+			this.updateTestCases();
+			TestCasesProvider.save();
 		}
+	};
+
+	TestCasesPane.prototype.updateTestCases = function() {
+		TestCasesProvider.updateTestCase(
+			_(this.widget).filter(function (widget) {
+				return widget.hasOwnProperty("testCase");
+			}).map(function(widget) {
+				return widget.testCase;
+			}).value()
+		);
 	};
 
 	TestCasesPane.prototype.currentDocumentChanged = function(event, newDocument) {
@@ -101,6 +106,7 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype._update = function() {
+		this.updateTestCases();
 		_.each(this.widgets, function (widget) {
 			widget.remove();
 		}); 

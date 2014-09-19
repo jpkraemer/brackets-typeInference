@@ -179,7 +179,7 @@ define(function (require, exports, module) {
 		});
 	}
 
-	function _saveTestCases () {
+	function save () {
 		var resultAst = {
 		    type: "Program",
 		    body: _.map(testCasesForCurrentDocument, function (testSuite, functionIdentifier) {
@@ -355,8 +355,6 @@ define(function (require, exports, module) {
 				_.assign(testCase, newTestCase);
 			}
 		}
-
-		_saveTestCases();
 	}
 
 	exports.init = init;
@@ -364,4 +362,5 @@ define(function (require, exports, module) {
 	exports.getTestCaseForFunctionIdentifierAndTestCaseId = getTestCaseForFunctionIdentifierAndTestCaseId; 
 	exports.addTestCaseForPath = addTestCaseForPath; 
 	exports.updateTestCase = updateTestCase;
+	exports.save = save;
 });
