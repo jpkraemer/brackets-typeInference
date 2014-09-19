@@ -155,11 +155,15 @@ a.ti-alert {
 	}
 }
 
-.ti-testCase {
+.ti-codeWidget {
 	margin: 6px 12px; 
 	background-color: #f8f8f8;
 
 	overflow: hidden;
+
+	&.ti-testCase {
+		margin-left: 18px;
+	}
 }
 
 .ti-header {
@@ -198,6 +202,11 @@ a.ti-alert {
 		&.ti-removeButton {
 			background-image: url(./img/remove-icon.svg);
 		}
+	}
+
+	&.ti-caption-immutable {
+		min-height: 23px;
+		font-style: italic;
 	}
 }
 

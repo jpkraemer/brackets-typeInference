@@ -6,6 +6,7 @@ define(function (require, exports, module) {
 
 	var _ 					= require("./lib/lodash");
 	var Resizer 			= brackets.getModule("utils/Resizer");
+	var BeforeAfterWidget	= require("./BeforeAfterWidget");
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
 	var EditorManager		= brackets.getModule("editor/EditorManager");
@@ -20,13 +21,6 @@ define(function (require, exports, module) {
 
 		this.widgets = [];
 
-		$(DocumentManager).on("currentDocumentChange", this.currentDocumentChanged); 
-		this.currentDocumentChanged(null, DocumentManager.getCurrentDocument());
-
-		$(DocumentManager).on("documentSaved", this.documentSaved);
-
-		$(TestCasesProvider).on("didLoadTestsForCurrentDocument", this._update);
-
 		this.$pane = $(require("text!./templates/TestCasesPane.html"));
 		this.$scollView = this.$pane.find('.ti-scrollView');
 		Resizer.makeResizable(this.$pane.get(0), Resizer.DIRECTION_HORIZONTAL, "left");
@@ -35,6 +29,14 @@ define(function (require, exports, module) {
 
 		this.$pane.insertBefore('#editor-holder > .CodeMirror');
 		$('#editor-holder > .CodeMirror').width("50%");
+
+		//respond to events 
+		$(DocumentManager).on("currentDocumentChange", this.currentDocumentChanged); 
+		this.currentDocumentChanged(null, DocumentManager.getCurrentDocument());
+
+		$(DocumentManager).on("documentSaved", this.documentSaved);
+
+		$(TestCasesProvider).on("didLoadTestsForCurrentDocument", this._update);
 	}
 
 	TestCasesPane.prototype.constructor = TestCasesPane; 
@@ -55,6 +57,8 @@ define(function (require, exports, module) {
 		}, this.currentFullEditor.document.file.fullPath));
 
 		newWidget.insertBefore(this.$pane.find('.ti-roundAddButton'));
+
+		this.widgets.push(newWidget);
 		
 		if (event !== undefined) {
 			event.stopPropagation();
@@ -62,10 +66,14 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype.documentSaved = function(event, doc) {
-		if (DocumentManager.getCurrentDocument() === doc) {
-			TestCasesProvider.updateTestCase(_.map(this.widgets, function(widget) {
-				return widget.testCase;
-			}));
+		if (DocumentManager.getCurrentDocument() === doc) { 
+			TestCasesProvider.updateTestCase(
+				_(this.widget).filter(function (widget) {
+					return widget.hasOwnProperty("testCase");
+				}).map(function(widget) {
+					return widget.testCase;
+				})
+			);
 		}
 	};
 
@@ -96,19 +104,33 @@ define(function (require, exports, module) {
 		_.each(this.widgets, function (widget) {
 			widget.remove();
 		}); 
+
 		this.widgets = [];
 
-		var testSuite = TestCasesProvider.getTestCasesForFunctionIdentifier(this.functionIdentifier);
+		var testSuite = TestCasesProvider.getTestSuiteForFunctionIdentifier(this.functionIdentifier);
+
+		if (testSuite === undefined) {
+			return;
+		}
+
+		var widget = new BeforeAfterWidget(testSuite.beforeEach.code, "before");
+		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
+		this.widgets.push(widget);
+
 		var testCases = [];
 		if (testSuite && testSuite.tests) {
 			testCases = testSuite.tests;
 		}
 		for (var i = 0; i < testCases.length; i++) {
 			var testCase = testCases[i];
-			var widget = new TestCaseWidget(testCase); 
+			widget = new TestCaseWidget(testCase); 
 			widget.insertBefore(this.$pane.find('.ti-roundAddButton')); 
 			this.widgets.push(widget);
 		}
+
+		widget = new BeforeAfterWidget(testSuite.afterEach.code, "after");
+		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
+		this.widgets.push(widget);
 	};
 
 	module.exports = TestCasesPane;  

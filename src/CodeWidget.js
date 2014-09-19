@@ -33,6 +33,7 @@ define(function (require, exports, module) {
 		this.codeMirror.on("changes", this.codeMirrorDidChange);
 
 		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
+		this.$container.find('.ti-editorHolder').hide();
 	}
 
 	CodeWidget.prototype.constructor = CodeWidget; 
@@ -49,6 +50,14 @@ define(function (require, exports, module) {
 		"$caption": {
 			get: function () { return this.$container.find(".ti-caption"); },
 			set: function () { throw new Error("Cannot set $caption"); }
+		},
+		"code": {
+			get: function () { 
+				return this.codeMirror.getValue();
+			},
+			set: function (newCode) { 
+				this.codeMirror.setValue(newCode);
+			}
 		}
 	});
 
@@ -94,7 +103,27 @@ define(function (require, exports, module) {
 	};
 
 	CodeWidget.prototype.toggleSourceCodeVisible = function(event) {
-		this.$container.find('.ti-editorHolder').slideToggle('slow');
+		var $editorHolder = this.$container.find('.ti-editorHolder'); 
+		if ($editorHolder.is(":hidden")) {
+			$editorHolder.height(0); 
+			$editorHolder.show(); 
+
+			this.codeMirror.on("update", function () {
+				$editorHolder.animate({
+					height: $editorHolder.find(".CodeMirror").outerHeight()
+				}, 'slow' , function() {
+					$editorHolder.removeAttr('style'); 
+				});
+
+				this.codeMirror.off("update");				
+			}.bind(this));
+
+			setTimeout(function () {
+				this.codeMirror.refresh();
+			}.bind(this), 1);
+		} else {
+			$editorHolder.slideUp('slow');
+		}
 	};
 
 	module.exports = CodeWidget;  

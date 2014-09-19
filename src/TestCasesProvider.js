@@ -115,7 +115,13 @@ define(function (require, exports, module) {
 
 						var functionIdentifier = node.expression.arguments[0].value;
 						testSuites[functionIdentifier] = {
-							tests: []
+							tests: [], 
+							beforeEach: {
+								code: "function () {}"
+							},
+							afterEach: {
+								code: "function () {}"
+							}
 						};
 						var individualTestsAst = node.expression.arguments[1].body.body; 
 
@@ -148,13 +154,9 @@ define(function (require, exports, module) {
 
 									testSuites[functionIdentifier].tests.push(testCase);
 								} else if (node.expression.callee.name === "beforeEach") {
-									testSuites[functionIdentifier].beforeEach = {
-										code: extractCodeFromLocation(node, node.expression.arguments[0].loc)
-									};
+									testSuites[functionIdentifier].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								} else if (node.expression.callee.name === "afterEach") {
-									testSuites[functionIdentifier].afterEach = {
-										code: extractCodeFromLocation(node, node.expression.arguments[0].loc)
-									};
+									testSuites[functionIdentifier].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								}
 							}
 						});
@@ -235,7 +237,7 @@ define(function (require, exports, module) {
 		        };
 
 		        if (testSuite.beforeEach) {
-					result.expression.arguments[1].body.push({
+					result.expression.arguments[1].body.body.push({
 						type: "ExpressionStatement",
 						expression: {
 							type: "CallExpression",
@@ -257,7 +259,7 @@ define(function (require, exports, module) {
 		        }
 		        
 		        if (testSuite.afterEach) {
-					result.expression.arguments[1].body.push({
+					result.expression.arguments[1].body.body.push({
 						type: "ExpressionStatement",
 						expression: {
 							type: "CallExpression",
@@ -300,12 +302,12 @@ define(function (require, exports, module) {
 		}); 
 	}
 
-	function getTestCasesForFunctionIdentifier (functionIdentifier) {
+	function getTestSuiteForFunctionIdentifier (functionIdentifier) {
 		return testCasesForCurrentDocument[functionIdentifier];
 	}
 
 	function getTestCaseForFunctionIdentifierAndTestCaseId (functionIdentifier, testCaseId) {
-		return _.find(getTestCasesForFunctionIdentifier(functionIdentifier), { id: testCaseId }); 
+		return _.find(getTestSuiteForFunctionIdentifier(functionIdentifier).tests, { id: testCaseId }); 
 	}
 
 	function addTestCaseForPath (testCase, fullPath) {
@@ -314,17 +316,25 @@ define(function (require, exports, module) {
 			return;
 		}
 
-		var testCasesForFunctionIdentifier = testCasesForCurrentDocument[testCase.functionIdentifier]; 
-		if (testCasesForFunctionIdentifier === undefined) {
-			testCasesForFunctionIdentifier = []; 
-			testCasesForCurrentDocument[testCase.functionIdentifier] = testCasesForFunctionIdentifier;
+		var testSuite = testCasesForCurrentDocument[testCase.functionIdentifier]; 
+		if (testSuite === undefined) {
+			testSuite = {
+				tests: [], 
+				beforeEach: {
+					code: "function () {}"
+				},
+				afterEach: {
+					code: "function () {}"
+				}
+			}; 
+			testCasesForCurrentDocument[testCase.functionIdentifier] = testSuite;
 		}
 
 		do {
 			testCase.id = Math.random().toString(36).substr(2,10); 
-		} while (_.find(testCasesForFunctionIdentifier, { id: testCase.id }) !== undefined); 
+		} while (_.find(testSuite.tests, { id: testCase.id }) !== undefined); 
 
-		testCasesForFunctionIdentifier.push(testCase);
+		testSuite.tests.push(testCase);
 
 		_saveTestCases();
 
@@ -350,8 +360,8 @@ define(function (require, exports, module) {
 	}
 
 	exports.init = init;
-	exports.getTestCasesForFunctionIdentifier = getTestCasesForFunctionIdentifier; 
-	exports.getTestCaseForFunctionIdentifierAndTestCaseId = getTestCasesForFunctionIdentifier; 
+	exports.getTestSuiteForFunctionIdentifier = getTestSuiteForFunctionIdentifier; 
+	exports.getTestCaseForFunctionIdentifierAndTestCaseId = getTestCaseForFunctionIdentifierAndTestCaseId; 
 	exports.addTestCaseForPath = addTestCaseForPath; 
 	exports.updateTestCase = updateTestCase;
 });

@@ -5,10 +5,8 @@ define(function (require, exports, module) {
 	"use strict"; 
 
 	var _ 					= require("./lib/lodash");
-	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 	var CodeWidget			= require("./CodeWidget");
 	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
-	var Resizer 			= brackets.getModule("utils/Resizer");
 	var TestCasesProvider	= require("./TestCasesProvider");
 
 	/**
@@ -22,6 +20,7 @@ define(function (require, exports, module) {
 		_.bindAll(this);
 
 		//add missing html
+		this.$container.addClass('ti-testCase');
 		this.$container.find(".ti-headerLine").prepend($("<span />").addClass("ti-testStatusIndicator"));
 		this.$container.find(".ti-header").append($("<span />").addClass("ti-button ti-addButton"));
 
@@ -33,6 +32,8 @@ define(function (require, exports, module) {
 	TestCaseWidget.prototype = Object.create(CodeWidget.prototype);
 	TestCaseWidget.prototype.constructor = TestCaseWidget; 
 	TestCaseWidget.prototype.parentClass = CodeWidget.prototype;
+
+	TestCaseWidget.prototype._isSuggestion = undefined;
 
 	Object.defineProperties(TestCaseWidget.prototype, {
 		"$statusIndicator": {
@@ -64,7 +65,7 @@ define(function (require, exports, module) {
 		},
 		"testCase": {
 			get: function () { 
-				this._testCase.code = this.codeMirror.getValue();
+				this._testCase.code = this.code;
 				this._testCase.title = this.$container.find(".ti-caption").text();
 
 				return this._testCase; 
@@ -72,14 +73,12 @@ define(function (require, exports, module) {
 			set: function (newTestCase) { 
 				this._testCase = newTestCase; 
 
-				this.codeMirror.setValue(this._testCase.code);
+				this.code = this._testCase.code;
 				this.$caption.text(this._testCase.title);
-				this.isSuggestion = this._testCase.isSuggestion;
+				this.isSuggestion = this._testCase.isSuggestion || false;
 			}
 		}
 	});
-
-	TestCaseWidget.prototype._isSuggestion 	= undefined;
 
 	TestCaseWidget.prototype.didUpdateTestResults = function(event, results) {
 		if (results[this.testCase.functionIdentifier]) {
