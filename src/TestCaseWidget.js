@@ -5,9 +5,10 @@ define(function (require, exports, module) {
 	"use strict"; 
 
 	var _ 					= require("./lib/lodash");
-	var Resizer 			= brackets.getModule("utils/Resizer");
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
+	var CodeWidget			= require("./CodeWidget");
 	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
+	var Resizer 			= brackets.getModule("utils/Resizer");
 	var TestCasesProvider	= require("./TestCasesProvider");
 
 	/**
@@ -16,42 +17,31 @@ define(function (require, exports, module) {
 	 * @param {{title: string, isSuggestion: boolean}} options
 	 */
 	function TestCaseWidget (testCase) {
+		CodeWidget.call(this);
+
 		_.bindAll(this);
 
+		//add missing html
+		this.$container.find(".ti-headerLine").prepend($("<span />").addClass("ti-testStatusIndicator"));
+		this.$container.find(".ti-header").append($("<span />").addClass("ti-button ti-addButton"));
+
+		//configure behavior
 		this.testCase = testCase;
 		$(TestCasesProvider).on("updatedTestResults", this.didUpdateTestResults);
-
-		var testCaseTemplate = require("text!./templates/testCase.html");
-		this._$container = $(Mustache.render(testCaseTemplate, testCase));
-
-		var $localEditorHolder = this.$container.find(".ti-editorHolder");
-		this.codeMirror = new CodeMirror(function (element) {
-			$localEditorHolder.html(element);
-		}, {
-			mode: "javascript",
-            theme: "default",
-            lineNumbers: true,
-            lineWrapping: true,
-			value: testCase.code
-		});
-
-		this.codeMirror.on("changes", this.codeMirrorDidChange);
-
-		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
-
-		this.isSuggestion = testCase.isSuggestion;
 	}
 
+	TestCaseWidget.prototype = Object.create(CodeWidget.prototype);
 	TestCaseWidget.prototype.constructor = TestCaseWidget; 
+	TestCaseWidget.prototype.parentClass = CodeWidget.prototype;
 
 	Object.defineProperties(TestCaseWidget.prototype, {
-		"$container": {
-			get: function () { return this._$container; },
-			set: function () { throw new Error("Cannot set $container"); }
+		"$statusIndicator": {
+			get: function () { return this.$container.find(".ti-testStatusIndicator"); },
+			set: function () { throw new Error("Cannot set $statusIndicator"); }
 		},
 		"$addRemoveButton": {
-			get: function () { return this.$container.find('.ti-button'); },
-			set: function () { throw new Error("Cannot set $addRemoveButton"); }
+			get: function () { return this.$container.find(".ti-header .ti-button"); },
+			set: function () { throw new Error("Cannot set $statusIndicator"); }
 		},
 		"isSuggestion": {
 			get: function () { return this._isSuggestion; },
@@ -79,53 +69,17 @@ define(function (require, exports, module) {
 
 				return this._testCase; 
 			},
-			set: function (newTestCase) { this._testCase = newTestCase; }
+			set: function (newTestCase) { 
+				this._testCase = newTestCase; 
+
+				this.codeMirror.setValue(this._testCase.code);
+				this.$caption.text(this._testCase.title);
+				this.isSuggestion = this._testCase.isSuggestion;
+			}
 		}
 	});
 
-	TestCaseWidget.prototype.codeMirror 	= undefined;
-	TestCaseWidget.prototype._$container 	= undefined;
 	TestCaseWidget.prototype._isSuggestion 	= undefined;
-
-	TestCaseWidget.prototype.codeMirrorDidChange = function() {
-		DocumentManager.getCurrentDocument().isDirty = true;
-	};
-
-	TestCaseWidget.prototype.insertBefore = function(element) {
-		this.$container.height(0); 
-		this.$container.insertBefore(element);
-
-		this.codeMirror.on("update", function () {
-			if (this.$container.find('.ti-header').outerHeight() >= 46) {
-				//this is a pretty dirty hack to check if layout has happened. .ti-header has a
-				//min-height of 46, so css has been applied if it's at least this big. 
-
-				var height = 	this.$container.find('.ti-header').outerHeight() + 
-								this.$container.find('.ti-editorHolder').outerHeight() +
-								4; //padding-bottom
-
-				this.$container.animate({ height: height }, 'fast', function () {
-					this.$container.removeAttr('style');
-				}.bind(this));
-
-				this.codeMirror.off("update");
-			}
-		}.bind(this));
-
-		setTimeout(function () {
-			this.codeMirror.refresh();
-		}.bind(this), 1);
-	};
-
-	TestCaseWidget.prototype.remove = function() {
-		this.$container.remove();
-	};
-
-	TestCaseWidget.prototype.toggleSourceCodeVisible = function(event) {
-		// this.$container.height(this.$container.outerHeight());
-
-		this.$container.find('.ti-editorHolder').slideToggle('slow');
-	};
 
 	TestCaseWidget.prototype.didUpdateTestResults = function(event, results) {
 		if (results[this.testCase.functionIdentifier]) {
