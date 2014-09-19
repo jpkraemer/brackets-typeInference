@@ -74,8 +74,8 @@ define(function (require, exports, module) {
 
 	TestCasesPane.prototype.updateTestCases = function() {
 		TestCasesProvider.updateTestCase(
-			_(this.widget).filter(function (widget) {
-				return widget.hasOwnProperty("testCase");
+			_(this.widgets).filter(function (widget) {
+				return ("testCase" in widget);
 			}).map(function(widget) {
 				return widget.testCase;
 			}).value()

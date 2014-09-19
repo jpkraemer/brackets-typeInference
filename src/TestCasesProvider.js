@@ -117,10 +117,10 @@ define(function (require, exports, module) {
 						testSuites[functionIdentifier] = {
 							tests: [], 
 							beforeEach: {
-								code: "function () {}"
+								code: "function () {\n\n}"
 							},
 							afterEach: {
-								code: "function () {}"
+								code: "function () {\n\n}"
 							}
 						};
 						var individualTestsAst = node.expression.arguments[1].body.body; 
@@ -265,7 +265,7 @@ define(function (require, exports, module) {
 							type: "CallExpression",
 							callee: {
 								type: "Identifier",
-								name: "beforeEach"
+								name: "afterEach"
 							},
 							arguments: [
 							{
@@ -321,10 +321,10 @@ define(function (require, exports, module) {
 			testSuite = {
 				tests: [], 
 				beforeEach: {
-					code: "function () {}"
+					code: "function () {\n\n}"
 				},
 				afterEach: {
-					code: "function () {}"
+					code: "function () {\n\n}"
 				}
 			}; 
 			testCasesForCurrentDocument[testCase.functionIdentifier] = testSuite;
