@@ -206,8 +206,13 @@
 			"runTestsInPath",
 			runTestsInPath,
 			true, 
-			"Removes documents from the database",
+			"Runs the tests in the given directory",
 			[ {
+				name: "jasminePath",
+				type: "string",
+				description: "The path to the jasmine cli script"
+			},
+			{
 				name: "fullPath", 
 				type: "string",
 				description: "A full path to a directory with specs"

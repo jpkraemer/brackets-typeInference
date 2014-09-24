@@ -294,8 +294,10 @@ define(function (require, exports, module) {
 		var testCaseFile = _getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath);
 		var testCaseDir = FileUtils.getDirectoryPath(testCaseFile.fullPath); 
 		var jasminePath = ExtensionUtils.getModulePath(module, "node/node_modules/jasmine-node/lib/jasmine-node/cli.js");
+		var nodeTheseusPath = ExtensionUtils.getModulePath(module, "node/node_modules/node-theseus/bin/node-theseus");
+		var fullExecPath = nodeTheseusPath + " --theseus-port=8889 " + jasminePath;
 
-		TITestRunner.exec("runTestsInPath", jasminePath, testCaseDir).done(function (result) {
+		TITestRunner.exec("runTestsInPath", fullExecPath, testCaseDir).done(function (result) {
 			$(exports).trigger("updatedTestResults", result);
 		}).fail(function (err) {
 			TIUtils.log(err);
