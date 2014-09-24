@@ -9,8 +9,10 @@
   "dependencies": {
     "esprima": "^1.2.2",
     "jasmine-node": "^1.14.5",
+    "lodash": "^2.4.1",
     "marked": "^0.3.2",
     "nedb": "^0.10.6",
+    "ws": "^0.4.32",
     "xml2js": "^0.4.4"
   },
   "engines": {
