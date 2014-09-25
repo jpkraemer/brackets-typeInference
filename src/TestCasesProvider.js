@@ -149,7 +149,8 @@ define(function (require, exports, module) {
 										id: literalTestCaseNameComponents[0],
 										functionIdentifier: functionIdentifier,
 										title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
-										code: extractCodeFromLocation(node, node.expression.arguments[1].loc)
+										code: extractCodeFromLocation(node, node.expression.arguments[1].loc),
+										sourceLocation: node.expression.arguments[1].loc
 									};
 
 									testSuites[functionIdentifier].tests.push(testCase);
@@ -286,7 +287,9 @@ define(function (require, exports, module) {
 		var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 
 
 		_getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath, true).done(function (file) {
-			file.write(code);
+			file.write(code, function () {
+				_currentDocumentChanged();
+			});
 		}); 
 	}
 

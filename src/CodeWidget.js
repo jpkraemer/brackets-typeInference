@@ -8,6 +8,7 @@ define(function (require, exports, module) {
 	var Resizer 			= brackets.getModule("utils/Resizer");
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
+	var TIUtils				= require("./TIUtils");
 
 	/**
 	 * @constructor
@@ -31,9 +32,11 @@ define(function (require, exports, module) {
 		});
 
 		this.codeMirror.on("changes", this.codeMirrorDidChange);
-
+		this.codeMirror.on("keydown", this._onEditorKeyEvent);
+				
 		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
 		this.$container.find('.ti-editorHolder').hide();
+
 	}
 
 	CodeWidget.prototype.constructor = CodeWidget; 
@@ -111,7 +114,7 @@ define(function (require, exports, module) {
 			this.codeMirror.on("update", function () {
 				$editorHolder.animate({
 					height: $editorHolder.find(".CodeMirror").outerHeight()
-				}, 'slow' , function() {
+				}, 'fast' , function() {
 					$editorHolder.removeAttr('style'); 
 				});
 
@@ -122,8 +125,30 @@ define(function (require, exports, module) {
 				this.codeMirror.refresh();
 			}.bind(this), 1);
 		} else {
-			$editorHolder.slideUp('slow');
+			$editorHolder.slideUp('fast');
 		}
+	};
+
+	CodeWidget.prototype._onEditorKeyEvent = function(theEditor, event) {
+		if (theEditor !== this.codeMirror) {
+			TIUtils.log("_onEditorKeyEvent called with invalid editor");
+			return; 
+		}
+
+		var cursorPos = this.codeMirror.getCursor();
+
+        switch (event.keyCode) {
+            case 38: //Arrow Up Key
+                if (cursorPos.line === 0) {
+                    $(this).trigger("cursorShouldMoveToOtherWidget", "up");
+                }
+                break;
+            case 40:
+                if (cursorPos.line === this.codeMirror.lineCount() - 1) {
+                	$(this).trigger("cursorShouldMoveToOtherWidget", "down");
+                }
+                break;
+        }
 	};
 
 	module.exports = CodeWidget;  

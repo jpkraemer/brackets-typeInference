@@ -80,11 +80,17 @@
 								for (var i = 1; i < backtrace.length; i++) {
 									var call = backtrace[i];
 									if (call.nodeId.indexOf(specPath) === 0) {
-										var testCaseInfo = testInfoForTheseusFunctionId(call.nodeId);
-										if (testCaseInfo !== undefined) {
-											testCaseInfo.calledFunctions.push(backtrace[0]);
+										var nodeIdComponents = call.nodeId.split("-"); 
+										if (nodeIdComponents[nodeIdComponents.length - 5] === "function") {
+											var testCaseInfo = testInfoForTheseusFunctionId(call.nodeId);
+											if (testCaseInfo !== undefined) {
+												testCaseInfo.calledFunctions.push({
+													functionInfo: _.find(functions, { id: backtrace[0].nodeId }),
+													backtrace: backtrace
+												});
+											}
+											break;
 										}
-										break;
 									}
 								}
 
