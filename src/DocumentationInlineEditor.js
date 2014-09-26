@@ -406,10 +406,21 @@ define(function (require, exports, module) {
         }.bind(this), 1);
    };
 
+    /**
+     * Updates the height of the inline widget if needed
+     */
     DocumentationInlineEditor.prototype._recalculateHeight = function() {
         this.hostEditor.setInlineWidgetHeight(this, Math.max(this.$contentDiv.height() + 10, 38), true);
     };
 
+    /**
+     * The click handler for all the "Add to JSDoc" links. Basically this is called when someone manually adds a pending change
+     * to the type information. It will update the type information in the store and try to merge all other pending changes. 
+     * Pending changes are deleted and will only come back if merging fails again after adding one of the pending changes.
+     * @param  {number} argumentTypeId    Index in the argument array or -1 for returnType. Preset via bind, not from event
+     * @param  {string} pendingChangesKey Key for the pending changes hash. Can be a theseus invocation ID or "merge". Preset via bind
+     * @param  {object} event             The event
+     */
     DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, pendingChangesKey, event) {
         if (argumentTypeId > -1) {
             //we have an argument change
@@ -449,6 +460,11 @@ define(function (require, exports, module) {
         this._render();
    };
 
+   /**
+    * Click handler for the "jump to call" links. Will scroll the callsite into view and briefly highlight the line.
+    * @param  {string} theseusInvocationId Theseus invocation id for the call. Preset via bind
+    * @param  {object} event               
+    */
    DocumentationInlineEditor.prototype._showCallLocationClickHandler = function(theseusInvocationId, event) {
         TheseusTypeProvider.callingInvocationForFunctionInvocation(theseusInvocationId).done(function (caller) {
             this.hostEditor.setCursorPos(caller.range.end.line - 1, caller.range.end.ch, true);
@@ -465,6 +481,10 @@ define(function (require, exports, module) {
        event.stopPropagation(); 
    };
 
+    /**
+     * Click handler for clicks on the widget. Will show a editor for the doc part that was targeted if any. 
+     * @param  {object} event 
+     */
     DocumentationInlineEditor.prototype._clickHandler = function(event) {
         var $target = $(event.currentTarget);
 
@@ -483,6 +503,9 @@ define(function (require, exports, module) {
         event.stopPropagation();
     };
 
+    /**
+     * Close the inline editor and send the updated type information to the store. 
+     */
     DocumentationInlineEditor.prototype._closeEditor = function() {
         if (this.inlineEditor !== null) {
             //tear down notifications to make sure don't get a blur event that would cause us to forget the docPartSpecifier
@@ -506,7 +529,7 @@ define(function (require, exports, module) {
     };
 
     /**
-     * This function shows an editor for the specified part of the documentat. Other open editors are closed. 
+     * This function shows an editor for the specified part of the document part. Other open editors are closed. 
      * @param  {{partType: string, id: number}} docPartSpecifier partType can be "parameters", "description"
      */
     DocumentationInlineEditor.prototype._displayEditorForPartOfTypeInfo = function() {

@@ -158,6 +158,11 @@ define(function (require, exports, module) {
 		return Mustache.render(template, templateValues); 
 	}
 
+	/**
+	 * Generates a full JSDoc comment block from the given type information
+	 * @param  {TypeInformation} typeInformation 
+	 * @return {String}
+	 */
 	function typeInformationToJSDoc (typeInformation) {
 		var template = require("text!./templates/full-jsdoc.txt");
 		var templateValues = {
@@ -231,6 +236,11 @@ define(function (require, exports, module) {
 		return result;
 	}
 
+	/**
+	 * Generate a JSDoc tag for the function identifier. The generated tag is no standard JSDoc tag. 
+	 * @param  {string} functionIdentifier
+	 * @return {string}
+	 */
 	function functionIdentifierToJSDoc (functionIdentifier) {
 		return "@uniqueFunctionIdentifier " + functionIdentifier;
 	}
