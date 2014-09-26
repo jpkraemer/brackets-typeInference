@@ -168,15 +168,17 @@ define(function (require, exports, module) {
 		if (typeInformation.returnType !== undefined) {
 			templateValues.returnType = {
 				type: typeSpecToJSDocTypeString(typeInformation.returnType), 
-				description: typeInformation.returnType.description
+				description: typeInformation.returnType.description || ""
 			};
 		}
 
 		if (typeInformation.argumentTypes !== undefined) {
 			templateValues.argumentTypes = _.map(typeInformation.argumentTypes, function (type) {
-				var result = _.pick(type, "name", "description"); 
-				result.type = typeSpecToJSDocTypeString(type);
-				return result;
+				return {
+					name: type.name,
+					description: type.description || "",
+					type: typeSpecToJSDocTypeString(type)
+				};
 			});
 		}
 
