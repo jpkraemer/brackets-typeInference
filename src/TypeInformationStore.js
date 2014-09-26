@@ -426,6 +426,26 @@ define(function (require, exports, module) {
 			return a;
 		};
 
+		var filterAttributesInConflict = function (oldDoc, newDoc) {
+			var originalNewDoc = _.cloneDeep(newDoc);
+			var mergedResult = conservativeMergePolicy(oldDoc, newDoc);
+
+			var result = {
+				theseusInvocationId: mergedResult.pendingChanges.theseusInvocationId
+			}; 
+			if (mergedResult.pendingChanges.argumentTypes !== undefined) {
+				result.argumentTypes = _.map(mergedResult.pendingChanges.argumentTypes, function (value, index) {
+					return originalNewDoc.argumentTypes[index];
+				});
+			}
+
+			if (mergedResult.pendingChanges.returnType !== undefined) {
+				result.returnType = mergedResult.pendingChanges.returnType;
+			}
+
+			return result;
+		};
+
 		_executeDatabaseCommand("find", 
 			{ functionIdentifier: functionIdentifier }
 		).done(function (docs) {
@@ -453,7 +473,7 @@ define(function (require, exports, module) {
 			if (typeInformationArray.length > 1) { 
 				//premerge changes
 				for (i = 1; i < typeInformationArray.length; i++) {
-					var changesToMerge = generalizingMergePolicy(_.cloneDeep(typeInformation), typeInformationArray[i]); 
+					var changesToMerge = generalizingMergePolicy(_.cloneDeep(typeInformation), _.cloneDeep(typeInformationArray[i])); 
 					typeInformation = merge(typeInformation, changesToMerge.propertiesToUpdate, [ "lastArguments" ]); 
 				}
 			}
@@ -472,8 +492,8 @@ define(function (require, exports, module) {
 
 				for (i = 0; i < typeInformationArray.length; i++) {
 					var singleTypeInformation = typeInformationArray[i]; 
-					var changesFromSingleTypeInformation = conservativeMergePolicy(doc, singleTypeInformation);
-					pendingChanges[singleTypeInformation.theseusInvocationId] = changesFromSingleTypeInformation.pendingChanges;
+					var changesFromSingleTypeInformation = filterAttributesInConflict(doc, singleTypeInformation);
+					pendingChanges[singleTypeInformation.theseusInvocationId] = changesFromSingleTypeInformation;
 				}
 			} else {
 				changes = generalizingMergePolicy(doc, typeInformation);
