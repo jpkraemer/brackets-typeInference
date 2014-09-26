@@ -424,8 +424,21 @@ define(function (require, exports, module) {
         //let's just submit the pending changes as new type information, if they merge flawlessly, we're good, 
         //otherwise we will just get them back later. 
         var typeInformationFromPendingChanges = _.map(_.omit(this.pendingChanges, "merge"), function (pendingChange) {
-            pendingChange.functionIdentifier = this.typeInformation.functionIdentifier;
-            return pendingChange;
+            var result = _.cloneDeep(this.typeInformation);
+
+            if (pendingChange.argumentTypes !== undefined) {
+                for (var i = 0; i < pendingChange.argumentTypes.length; i++) {
+                    if (pendingChange.argumentTypes[i] !== undefined) {
+                        result.argumentTypes[i] = pendingChange.argumentTypes[i]; 
+                    }
+                }
+            }
+
+            if (pendingChange.returnType !== undefined) {
+                result.returnType = pendingChange.returnType;
+            }
+
+            return result;
         }.bind(this));
 
         TypeInformationStore.userUpdatedTypeInformation(this, typeInformationFromPendingChanges, true, true);

@@ -435,7 +435,11 @@ define(function (require, exports, module) {
 			}; 
 			if (mergedResult.pendingChanges.argumentTypes !== undefined) {
 				result.argumentTypes = _.map(mergedResult.pendingChanges.argumentTypes, function (value, index) {
-					return originalNewDoc.argumentTypes[index];
+					if (value !== undefined) {
+						return originalNewDoc.argumentTypes[index];
+					} else {
+						return undefined;
+					}
 				});
 			}
 
