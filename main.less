@@ -304,9 +304,32 @@ a.ti-alert {
 	}
 }
 
-#ti-runTests-toolbar-button {
-	content: "";
+#main-toolbar .buttons #ti-runTests-toolbar-button {
 	background-image: url(./img/runTests-toolbar-button.svg);
 	background-position: center;
 	background-repeat: no-repeat;
+
+	&.ti-loading {
+		background-image: none;
+
+		-webkit-animation: rotate .6s linear infinite;
+		border-radius: 100%; 
+		border-top: 2px solid #bbb; 
+		border-bottom: 2px solid #bbb; 
+		border-left: 2px solid #bbb; 
+		border-right: none;
+		width: 18px;
+		height: 18px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+}
+
+@-webkit-keyframes rotate {
+	0% {
+		-webkit-transform: rotateZ(-360deg);
+	}
+	100% {
+		-webkit-transform: rotateZ(0deg);
+	}
 }

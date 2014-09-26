@@ -300,9 +300,14 @@ define(function (require, exports, module) {
 		var nodeTheseusPath = ExtensionUtils.getModulePath(module, "node/node_modules/node-theseus/bin/node-theseus");
 		var fullExecPath = nodeTheseusPath + " --theseus-port=8889 " + jasminePath;
 
+		var $button = $('#main-toolbar .buttons #ti-runTests-toolbar-button'); 
+		$button.addClass('ti-loading');
+
 		TITestRunner.exec("runTestsInPath", fullExecPath, testCaseDir).done(function (result) {
+			$button.removeClass('ti-loading');
 			$(exports).trigger("updatedTestResults", result);
 		}).fail(function (err) {
+			$button.removeClass('ti-loading');
 			TIUtils.log(err);
 		}); 
 	}

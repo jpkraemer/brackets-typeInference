@@ -247,7 +247,6 @@ define(function (require, exports, module) {
 				start: calledFunction.functionInfo.start, 
 				end: calledFunction.functionInfo.end 
 			};
-
 			adjustedRange.start.line -= 1; 
 			adjustedRange.end.line -= 1; 
 
