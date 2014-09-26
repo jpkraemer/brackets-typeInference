@@ -373,20 +373,23 @@ define(function (require, exports, module) {
 			if ((result.propertiesToUpdate.argumentTypes !== undefined) && (result.original.argumentTypes !== undefined)) {
 				result.pendingChanges.argumentTypes = [];
 
-				for (var i = 0; i < result.original.argumentTypes.length; i++) {
+				for (var i = 0; i < Math.max(result.original.argumentTypes.length, result.propertiesToUpdate.argumentTypes.length); i++) {
 					var originalType = result.original.argumentTypes[i]; 
 					var newType = result.propertiesToUpdate.argumentTypes[i];
 
-					var isEqual = _.isEqual(newType, originalType, comparatorIgnoringCount);
+					if (originalType !== undefined) {
+						var isEqual = _.isEqual(newType, originalType, comparatorIgnoringCount);
 
-					if (! isEqual) {
-						result.pendingChanges.argumentTypes[i] = newType;
+						if (! isEqual) {
+							result.pendingChanges.argumentTypes[i] = newType;
+							result.propertiesToUpdate.argumentTypes[i] = originalType; 
+						}
 					}
 				}
 
-				if (result.pendingChanges.argumentTypes.length !== 0) {
-					delete result.propertiesToUpdate.argumentTypes; 
-				}
+				// if (result.pendingChanges.argumentTypes.length !== 0) {
+				// 	delete result.propertiesToUpdate.argumentTypes; 
+				// }
 			} else if ((result.propertiesToRemove.argumentTypes) && (result.original.argumentTypes !== undefined)) {
 				result.pendingChanges.argumentTypes = true;
 				delete result.propertiesToRemove.argumentTypes;
