@@ -257,6 +257,22 @@ define(function (require, exports, module) {
 		highlightCallInTest(); 
 	};
 
+	TestCaseWidget.prototype.focus = function(direction) {
+		if ((direction === "down") || (this.$editorHolder.is(":hidden"))) {
+			this.$caption.focus();
+		} else {
+			CodeWidget.prototype.focus.apply(this, arguments);
+		}
+	};
+
+	TestCaseWidget.prototype.toggleSourceCodeVisible = function(event) {
+		if ((this.codeMirror.hasFocus()) && (this.$editorHolder.is(":visible"))) {
+			this.$caption.focus();
+		}
+
+		CodeWidget.prototype.toggleSourceCodeVisible.apply(this, arguments);
+	};
+
 	TestCaseWidget.prototype._onCalledFunctionsLinkClicked = function(event) {
 		this.$calledFunctionsTableWrapper.slideToggle('fast');
 		event.stopPropagation();
@@ -285,7 +301,12 @@ define(function (require, exports, module) {
     	if (event.keyCode === 38) {
     		$(this).trigger("cursorShouldMoveToOtherWidget", "up");
     	} else if (event.keyCode === 40) {
-    		this.codeMirror.focus();
+    		if (this.$editorHolder.is(":hidden")) {
+    			$(this).trigger("cursorShouldMoveToOtherWidget", "down");
+    		} else {
+    			this.codeMirror.setSelection({ line: 0, ch: 0 });
+	    		this.codeMirror.focus();
+    		}
     	}
     };
 

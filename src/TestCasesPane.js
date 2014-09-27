@@ -13,6 +13,7 @@ define(function (require, exports, module) {
 	var FunctionTracker		= require("./FunctionTracker");
 	var TestCasesProvider	= require("./TestCasesProvider");
 	var TestCaseWidget		= require("./TestCaseWidget");
+	var TIUtils				= require("./TIUtils");
 	
 	var EVENT_NAMESPACE = ".TestCasesPane"; 
 
@@ -105,6 +106,23 @@ define(function (require, exports, module) {
 		}
 	};
 
+	TestCasesPane.prototype.cursorShouldMoveToOtherWidget = function(event, direction) {
+		var emittingWidgetIndex = this.widgets.indexOf(event.target);
+		if (emittingWidgetIndex === -1) {
+			TIUtils.log("cursorShouldMoveToOtherWidget event received from untracked widget");
+			return; 
+		}
+		if (((emittingWidgetIndex === 0) && (direction === "up")) || 
+			((emittingWidgetIndex === this.widgets.length - 1) && (direction === "down"))) {
+			//reached end of list
+			return; 
+		}
+
+		var nextWidgetIndex = (direction === "up") ? emittingWidgetIndex - 1 : emittingWidgetIndex + 1; 
+		var nextWidget = this.widgets[nextWidgetIndex];
+		nextWidget.focus(direction);
+	};
+
 	TestCasesPane.prototype._update = function() {
 		this.updateTestCases();
 		_.each(this.widgets, function (widget) {
@@ -120,6 +138,7 @@ define(function (require, exports, module) {
 		}
 
 		var widget = new BeforeAfterWidget(testSuite.beforeEach.code, "before");
+		$(widget).on("cursorShouldMoveToOtherWidget", this.cursorShouldMoveToOtherWidget);
 		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
 		this.widgets.push(widget);
 
@@ -130,11 +149,13 @@ define(function (require, exports, module) {
 		for (var i = 0; i < testCases.length; i++) {
 			var testCase = testCases[i];
 			widget = new TestCaseWidget(testCase); 
+			$(widget).on("cursorShouldMoveToOtherWidget", this.cursorShouldMoveToOtherWidget);
 			widget.insertBefore(this.$pane.find('.ti-roundAddButton')); 
 			this.widgets.push(widget);
 		}
 
 		widget = new BeforeAfterWidget(testSuite.afterEach.code, "after");
+		$(widget).on("cursorShouldMoveToOtherWidget", this.cursorShouldMoveToOtherWidget);
 		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
 		this.widgets.push(widget);
 	};

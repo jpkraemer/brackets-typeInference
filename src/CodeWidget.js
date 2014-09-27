@@ -33,7 +33,8 @@ define(function (require, exports, module) {
 
 		this.codeMirror.on("changes", this.codeMirrorDidChange);
 		this.codeMirror.on("keydown", this._onEditorKeyEvent);
-				
+		this.$container.on("keydown", this._onGeneralKeyEvent);
+
 		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
 		this.$container.find('.ti-editorHolder').hide();
 
@@ -45,6 +46,10 @@ define(function (require, exports, module) {
 		"$container": {
 			get: function () { return this._$container; },
 			set: function () { throw new Error("Cannot set $container"); }
+		},
+		"$editorHolder": {
+			get: function () { return this.$container.find('.ti-editorHolder');	},
+			set: function () { throw new Error("Cannot set $editorHolder"); }	
 		},
 		"$addRemoveButton": {
 			get: function () { return this.$container.find('.ti-button'); },
@@ -106,17 +111,16 @@ define(function (require, exports, module) {
 	};
 
 	CodeWidget.prototype.toggleSourceCodeVisible = function(event) {
-		var $editorHolder = this.$container.find('.ti-editorHolder'); 
-		if ($editorHolder.is(":hidden")) {
-			$editorHolder.height(0); 
-			$editorHolder.show(); 
+		if (this.$editorHolder.is(":hidden")) {
+			this.$editorHolder.height(0); 
+			this.$editorHolder.show(); 
 
 			this.codeMirror.on("update", function () {
-				$editorHolder.animate({
-					height: $editorHolder.find(".CodeMirror").outerHeight()
+				this.$editorHolder.animate({
+					height: this.$editorHolder.find(".CodeMirror").outerHeight()
 				}, 'fast' , function() {
-					$editorHolder.removeAttr('style'); 
-				});
+					this.$editorHolder.removeAttr('style'); 
+				}.bind(this));
 
 				this.codeMirror.off("update");				
 			}.bind(this));
@@ -125,7 +129,21 @@ define(function (require, exports, module) {
 				this.codeMirror.refresh();
 			}.bind(this), 1);
 		} else {
-			$editorHolder.slideUp('fast');
+			this.$editorHolder.slideUp('fast');
+		}
+	};
+
+	CodeWidget.prototype.focus = function(direction) {
+		if (this.$editorHolder.is(":visible")) {
+			if (direction === "up") {
+				var lastLineIndex = this.codeMirror.lineCount() - 1;
+				this.codeMirror.setSelection({ line: lastLineIndex, ch: this.codeMirror.getLine(lastLineIndex).length });
+			} else {
+				this.codeMirror.setSelection({ line: 0, ch: 0 });
+			}
+			this.codeMirror.focus();
+		} else {
+			$(this).trigger("cursorShouldMoveToOtherWidget", direction);
 		}
 	};
 
@@ -149,6 +167,22 @@ define(function (require, exports, module) {
                 }
                 break;
         }
+	};
+
+	CodeWidget.prototype._onGeneralKeyEvent = function(event) {
+		if (event.metaKey) {
+			if (event.keyCode === 57) {
+				//Command + 9
+				if (this.$editorHolder.is(":visible")) {
+					this.toggleSourceCodeVisible();
+				}
+			} else if (event.keyCode === 56) {
+				//Command + 8
+				if (this.$editorHolder.is(":hidden")) {
+					this.toggleSourceCodeVisible();
+				}
+			}
+		}
 	};
 
 	module.exports = CodeWidget;  

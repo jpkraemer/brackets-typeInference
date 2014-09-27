@@ -21,6 +21,7 @@ define(function (require, exports, module) {
 		_.bindAll(this);
 
 		this.code = code;
+		this.mode = mode;
 		this.$caption.text(mode + "Each");
 		this.$container.find(".ti-header").addClass('ti-caption-immutable');
 	}
@@ -43,6 +44,18 @@ define(function (require, exports, module) {
 			}
 		}
 	});
+
+	BeforeAfterWidget.prototype.toggleSourceCodeVisible = function(event) {
+		if ((this.codeMirror.hasFocus()) && (this.$editorHolder.is(":visible"))) {
+			if (this.mode === "before") {
+				$(this).trigger("cursorShouldMoveToOtherWidget", "down");
+			} else {
+				$(this).trigger("cursorShouldMoveToOtherWidget", "up");
+			}
+		}
+
+		CodeWidget.prototype.toggleSourceCodeVisible.apply(this, arguments);
+	};
 
 	module.exports = BeforeAfterWidget;  
 });
