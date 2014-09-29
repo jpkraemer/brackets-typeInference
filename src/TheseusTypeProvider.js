@@ -119,21 +119,28 @@ define(function (require, exports, module) {
 
     			for (var i = 0; i < results.length; i++) {
     				var result = results[i]; 
-    				var resultToPassOn = { 
-    					functionIdentifier: result.nodeId,
-    					theseusInvocationId: result.invocationId
-    				};
 
-					var argumentNames = _.pluck(result.arguments, "name");
-					resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
-					for (var j = 0; j < resultToPassOn.argumentTypes.length; j++) {
-						resultToPassOn.argumentTypes[j].name = argumentNames[j];
+    				var nodeIdComponents = result.nodeId.split("-"); 
+
+    				if (nodeIdComponents[nodeIdComponents.length - 3] === "function") {
+	    				var resultToPassOn = { 
+	    					functionIdentifier: result.nodeId,
+	    					theseusInvocationId: result.invocationId
+	    				};
+
+						var argumentNames = _.pluck(result.arguments, "name");
+						resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
+						for (var j = 0; j < resultToPassOn.argumentTypes.length; j++) {
+							resultToPassOn.argumentTypes[j].name = argumentNames[j];
+						}
+
+						resultToPassOn.lastArguments = result.arguments; 
+						if (result.returnValue !== undefined) {
+							resultToPassOn.returnType = result.returnValue.typeSpec; 
+						}
+
+						resultsToPassOn.push(resultToPassOn); 
 					}
-
-					resultToPassOn.lastArguments = result.arguments; 
-					resultToPassOn.returnType = result.returnValue.typeSpec; 
-
-					resultsToPassOn.push(resultToPassOn); 
     			}
     			
     			$(exports).trigger("didReceiveTypeInformation", [ exports, resultsToPassOn, true ]); 
