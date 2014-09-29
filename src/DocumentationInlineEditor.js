@@ -285,6 +285,10 @@ define(function (require, exports, module) {
             this.docPartSpecifier = { partType: _.first(this._availableDocPartTypes()) };
         }
 
+        if (this.docPartSpecifier.partType === "arguments") {
+            this.docPartSpecifier.id = (fromBelow) ? this.typeInformation.argumentTypes.length - 1 : 0;
+        }
+
         this._render();
     };
 
