@@ -107,6 +107,10 @@ define(function (require, exports, module) {
 
 		var result = TYPE_SPEC_MATCHING_QUALITY.NO_MATCH; 
 
+		if ((a === undefined) || (b === undefined)) {
+			return result;
+		}
+
 		if (b.type === "any") {
 			result = TYPE_SPEC_MATCHING_QUALITY.FULFILMENT_MATCH;
 		} else if (_.contains(["number", "boolean", "string", "function"], b.type)) {
