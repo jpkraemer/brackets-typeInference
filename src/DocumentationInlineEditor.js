@@ -227,7 +227,7 @@ define(function (require, exports, module) {
     DocumentationInlineEditor.prototype.onAdded = function () {
         DocumentationInlineEditor.prototype.parentClass.onAdded.apply(this, arguments);
 
-        this.hostEditor.setInlineWidgetHeight(this, 150, true);
+        this._recalculateHeight();
     };
 
     /**
@@ -590,6 +590,9 @@ define(function (require, exports, module) {
 
         this.inlineEditor.on("keydown", this._onEditorKeyEvent);
         this.inlineEditor.on("blur", this._onEditorBlur);
+        this.inlineEditor.on("update", function () {
+            this._recalculateHeight();
+        }.bind(this));
 
         this.inlineEditor.focus();
         this.inlineEditor.setCursor(0, jsDoc.length - 1);
