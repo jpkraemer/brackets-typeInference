@@ -84,10 +84,13 @@
 										if (nodeIdComponents[nodeIdComponents.length - 5] === "function") {
 											var testCaseInfo = testInfoForTheseusFunctionId(call.nodeId);
 											if (testCaseInfo !== undefined) {
-												testCaseInfo.calledFunctions.push({
-													functionInfo: _.find(functions, { id: backtrace[0].nodeId }),
-													backtrace: backtrace
-												});
+												var functionInfo = _.find(functions, { id: backtrace[0].nodeId });
+												if (functionInfo !== undefined) {
+													testCaseInfo.calledFunctions.push({
+														functionInfo: functionInfo,
+														backtrace: backtrace
+													});
+												}
 											}
 											break;
 										}

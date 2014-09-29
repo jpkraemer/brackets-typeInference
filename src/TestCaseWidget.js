@@ -137,8 +137,8 @@ define(function (require, exports, module) {
 				var $calledFunctionsTable = $("<table />");
 				for (var i = 0; i < this.testResult.calledFunctions.length; i++) {
 					var calledFunction = this.testResult.calledFunctions[i]; 
-					var $tableRow = $("<tr />"); 
-					
+
+					var $tableRow = $("<tr />"); 					
 					$("<td />").text(ProjectManger.makeProjectRelativeIfPossible(calledFunction.functionInfo.path)).appendTo($tableRow); 
 					$("<td />").text(calledFunction.functionInfo.name).appendTo($tableRow); 
 					$("<td />").appendTo($tableRow).append(
