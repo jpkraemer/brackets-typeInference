@@ -33,8 +33,11 @@ define(function (require, exports, module) {
 					var currentParameterHint = parameterHint.parameters[parameterHint.currentIndex]; 
 					var goodMatches = _.remove(hints.hints, function (hint) {
 						var hintTypeSpec = ternTypeToTypeSpec(hint);
-
-						hint.typeSpecMatchingQuality = isTypeSpecMatchingTypeSpec(hintTypeSpec, currentParameterHint.typeInformation);
+						if (currentParameterHint !== undefined) {
+							hint.typeSpecMatchingQuality = isTypeSpecMatchingTypeSpec(hintTypeSpec, currentParameterHint.typeInformation);
+						} else {
+							hint.typeSpecMatchingQuality = TYPE_SPEC_MATCHING_QUALITY.NO_MATCH;
+						}
 						return (hint.typeSpecMatchingQuality < 0);
 					});
 					goodMatches = _.sortBy(goodMatches, "typeSpecMatchingQuality");

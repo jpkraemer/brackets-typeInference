@@ -88,6 +88,7 @@ define(function (require, exports, module) {
 		this._endBookmark 		= hostEditor._codeMirror.setBookmark(endPos);
 
         this._onEditorBlur              = this._onEditorBlur.bind(this);
+        this._onEditorUpdate            = this._onEditorUpdate.bind(this);
         this._onEditorKeyEvent          = this._onEditorKeyEvent.bind(this);
         this._didUpdateTypeInformation  = this._didUpdateTypeInformation.bind(this);
         this._clickHandler              = this._clickHandler.bind(this);
@@ -285,7 +286,7 @@ define(function (require, exports, module) {
             this.docPartSpecifier = { partType: _.first(this._availableDocPartTypes()) };
         }
 
-        if (this.docPartSpecifier.partType === "arguments") {
+        if (this.docPartSpecifier.partType === "parameters") {
             this.docPartSpecifier.id = (fromBelow) ? this.typeInformation.argumentTypes.length - 1 : 0;
         }
 
@@ -514,6 +515,7 @@ define(function (require, exports, module) {
         if (this.inlineEditor !== null) {
             //tear down notifications to make sure don't get a blur event that would cause us to forget the docPartSpecifier
             this.inlineEditor.off("blur", this._onEditorBlur);
+            this.inlineEditor.off("update", this._onEditorUpdate);
 
             var jsdocString = this.inlineEditor.getValue();
             var typeInformationUpdate = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(_.cloneDeep(this.typeInformation), jsdocString);
@@ -594,9 +596,7 @@ define(function (require, exports, module) {
 
         this.inlineEditor.on("keydown", this._onEditorKeyEvent);
         this.inlineEditor.on("blur", this._onEditorBlur);
-        this.inlineEditor.on("update", function () {
-            this._recalculateHeight();
-        }.bind(this));
+        this.inlineEditor.on("update", this._onEditorUpdate);
 
         this.inlineEditor.focus();
         this.inlineEditor.setCursor(0, jsDoc.length - 1);
@@ -655,6 +655,14 @@ define(function (require, exports, module) {
     DocumentationInlineEditor.prototype._onEditorBlur = function() {
         this.docPartSpecifier = undefined;
         this._render();
+    };
+
+    /**
+     * Handler for editor dom updates
+     */
+    
+    DocumentationInlineEditor.prototype._onEditorUpdate = function() {
+        this._recalculateHeight();
     };
 
     /**

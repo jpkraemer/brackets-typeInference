@@ -271,6 +271,12 @@ define(function (require, exports, module) {
 					_.defaults(b, defaults);
 				}
 
+				if (Array.isArray(a) && Array.isArray(b)) {
+					return _.every(_.keys(a), function (key) {
+						return betterIsEqual(a[key], b[key]);
+					});
+				}
+
 				return _.isEqual(a, b);
 			};
 
@@ -294,7 +300,7 @@ define(function (require, exports, module) {
 						result.propertiesToUpdate[key] = newDoc[key];
 					}
 				} else {
-					if (key !== "lastArguments") {
+					if ((key !== "lastArguments") && (oldDoc[key] !== undefined)) {
 						result.propertiesToRemove[key] = true;
 						oldDoc[key] = undefined;
 					}
@@ -563,7 +569,7 @@ define(function (require, exports, module) {
 
 		//merge optional
 		if (typeA.optional || typeB.optional) {
-			resultType.optional = true;
+			// resultType.optional = true;
 		}
 
 		if (typeA.type !== typeB.type) {
@@ -600,7 +606,7 @@ define(function (require, exports, module) {
 
 			for (; i < longerSpec.length; i++) {
 				tmpType = longerSpec[i]; 
-				tmpType.optional = true;
+				// tmpType.optional = true;
 				mergedTypes.push(tmpType); 
 			}
 
@@ -663,7 +669,7 @@ define(function (require, exports, module) {
 					}
 
 					resultType.spec[key] = tmpType.spec[key]; 
-					resultType.spec[key].optional = true;
+					// resultType.spec[key].optional = true;
 				}
 			}
 		}
