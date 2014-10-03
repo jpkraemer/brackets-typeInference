@@ -113,7 +113,7 @@ define(function (require, exports, module) {
 	 * @param  {string} functionIdentifier
 	 * @return {TypeInformation (Promise)}
 	 */
-	function typeInformationForFunctionIdentifer (functionIdentifier) {
+	function typeInformationForFunctionIdentifier (functionIdentifier) {
 		var result = $.Deferred();
 
 		_executeDatabaseCommand("find", 
@@ -829,7 +829,7 @@ define(function (require, exports, module) {
 	exports.init = _init;
 	exports.setOptions = setOptions;
 	exports.mergeTypeSpecs = _mergeTypeSpecs; 
-	exports.typeInformationForFunctionIdentifer = typeInformationForFunctionIdentifer;
+	exports.typeInformationForFunctionIdentifier = typeInformationForFunctionIdentifier;
 	exports.typeInformationForFunctionNameInFile = typeInformationForFunctionNameInFile;
 	exports.functionIdentifiersForFile = functionIdentifiersForFile;
 	exports.userUpdatedTypeInformation = userUpdatedTypeInformation; 

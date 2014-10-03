@@ -99,7 +99,7 @@ define(function (require, exports, module) {
         this.$htmlContent.empty();
         this.$htmlContent.off();
 
-        TypeInformationStore.typeInformationForFunctionIdentifer(this.functionIdentifier).done(function (docs) {
+        TypeInformationStore.typeInformationForFunctionIdentifier(this.functionIdentifier).done(function (docs) {
             if (docs.length === 0) {
                 return;
             } else {
