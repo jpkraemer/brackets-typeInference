@@ -1,0 +1,3 @@
+function () {
+	expect(function () { __name__; }).not.toThrow();
+}

@@ -17,6 +17,10 @@ define(function (require, exports, module) {
 	var ProjectManager 			= brackets.getModule("project/ProjectManager");
 	var TITestRunner			= new NodeDomain("TITestRunner", ExtensionUtils.getModulePath(module, "node/TITestRunnerDomain"));
 	var TIUtils					= require("./TIUtils");
+	var TypeInformationStore	= require("./TypeInformationStore");
+
+	var returnValueTestTemplate = require("text!./templates/returnValueTest.txt");
+	var exceptionTestTemplate 	= require("text!./templates/exceptionTest.txt");
 
 	var testCasesForCurrentDocument = {};
 	var SEPARATOR = "$$";
@@ -115,6 +119,7 @@ define(function (require, exports, module) {
 
 						var functionIdentifier = node.expression.arguments[0].value;
 						testSuites[functionIdentifier] = {
+							title: node.expression.arguments[0].value,
 							tests: [], 
 							beforeEach: {
 								code: "function () {\n\n}"
@@ -293,6 +298,55 @@ define(function (require, exports, module) {
 		}); 
 	}
 
+	/**
+	 * This method generates suggested test cases based on a given type information 
+	 * Note that the test cases suggested here are by design and not set in stone.
+	 * @param  {TypeInformation} typeInformation 
+	 * @return {[TestCase]}
+	 */
+	function suggestArgumentValues (typeInformation) {
+		var result = []; 
+		for (var i = 0; i < typeInformation.argumentTypes.length; i++) {
+			var argumentType = typeInformation.argumentTypes[i]; 
+			var argumentSuggestion = []; 
+
+			switch (argumentType.type) {
+				case "number": 
+					argumentSuggestion = argumentSuggestion.concat([ 0, 1, -1, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY ]); 
+					break; 
+				case "string": 
+					argumentSuggestion = argumentSuggestion.concat([ "", "testString" ]);
+					break; 
+				case "array":
+					argumentSuggestion.push([]);
+					if (_.isEmpty(argumentSuggestion.spec)) {
+						argumentSuggestion.push([ 0, "a", 2, "b", 4, "c", 6, "d", 8, "e" ]); 
+					} else if (argumentSuggestion.spec.length === 1) {
+						switch (argumentSuggestion.spec[0].type) {
+							case "string": 
+								argumentSuggestion.push([ "a", "b", "c", "d", "e", "f" ]); 
+								break; 
+							case "number":
+								argumentSuggestion.push([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+								break;
+						}
+					}
+					break;
+				case "object":
+					argumentSuggestion.push({});
+					break; 
+			}
+
+			if (argumentType.optional === true) {
+				argumentSuggestion.push(undefined);
+			}
+
+			result[i] = argumentSuggestion;
+		}
+
+		return result;
+	}
+
 	function runTests () {
 		var testCaseFile = _getTestCaseFileForPath(DocumentManager.getCurrentDocument().file.fullPath);
 		var testCaseDir = FileUtils.getDirectoryPath(testCaseFile.fullPath); 
@@ -310,6 +364,51 @@ define(function (require, exports, module) {
 			$button.removeClass('ti-loading');
 			TIUtils.log(err);
 		}); 
+	}
+
+	function getTestSuggestionsForFunctionIdentifier (functionIdentifier) {
+		var resultPromise = $.Deferred();
+		var typeInformation = TypeInformationStore.typeInformationForFunctionIdentifier(functionIdentifier).done(function (docs) {
+			var getTemplateStringForBaseTemplate = function (template) {
+				var functionCall = functionName + "(";
+				functionCall += typeInformation.argumentTypes.map(function(el, index) {
+					return "__" + index + "__"; 
+				}).join(", ");
+				functionCall += ")";
+				template = template.replace(/__name__/, functionCall); 
+				return template;
+			};
+
+			if (docs.length === 0) {
+				resultPromise.reject("No type information found");
+			}
+
+			var typeInformation = docs[0];
+
+			var functionIdentifierSegments = typeInformation.functionIdentifier.split("-");
+			var functionIndex = functionIdentifierSegments.lastIndexOf("function");
+			var functionName = functionIdentifierSegments.slice(functionIndex + 1, -1).join("-");
+
+			var result = []; 
+			var argumentSuggestions = suggestArgumentValues(typeInformation);
+			if (typeInformation.returnType !== undefined) {
+				result.push({
+					title: "should return correct result",
+					templateString: getTemplateStringForBaseTemplate(returnValueTestTemplate),
+					argumentSuggestions: argumentSuggestions
+				});
+			}
+
+			result.push({
+				title: "should not throw exception for valid input",
+				templateString: getTemplateStringForBaseTemplate(exceptionTestTemplate),
+				argumentSuggestions: argumentSuggestions
+			});
+
+			resultPromise.resolve(result);
+		}); 
+
+		return resultPromise.promise();		
 	}
 
 	function getTestSuiteForFunctionIdentifier (functionIdentifier) {
@@ -346,7 +445,7 @@ define(function (require, exports, module) {
 
 		testSuite.tests.push(testCase);
 
-		_saveTestCases();
+		// _saveTestCases();
 
 		return testCase;
 	}
@@ -368,6 +467,7 @@ define(function (require, exports, module) {
 	}
 
 	exports.init = init;
+	exports.getTestSuggestionsForFunctionIdentifier = getTestSuggestionsForFunctionIdentifier;
 	exports.getTestSuiteForFunctionIdentifier = getTestSuiteForFunctionIdentifier; 
 	exports.getTestCaseForFunctionIdentifierAndTestCaseId = getTestCaseForFunctionIdentifierAndTestCaseId; 
 	exports.addTestCaseForPath = addTestCaseForPath; 

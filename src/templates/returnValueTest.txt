@@ -1,0 +1,4 @@
+function () {
+    var result = __name__;
+    expect(result).toEqual(undefined);
+}
