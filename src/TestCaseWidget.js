@@ -164,7 +164,9 @@ define(function (require, exports, module) {
  		var $statusIndicator = this.$container.find(".ti-testStatusIndicator");
 		if (this.testResult.success) {
 			$statusIndicator.removeClass('ti-testStatusFailed');
+			$statusIndicator.addClass('ti-testStatusSuccess');
 		} else {
+			$statusIndicator.removeClass('ti-testStatusSuccess');
 			$statusIndicator.addClass('ti-testStatusFailed');
 		}
  	};
