@@ -94,20 +94,6 @@ define(function (require, exports, module) {
 		this.$container.remove();
 	};
 
-	TemplateWidget.prototype.focus = function(direction) {
-		if (this.$editorHolder.is(":visible")) {
-			if (direction === "up") {
-				var lastLineIndex = this.codeMirror.lineCount() - 1;
-				this.codeMirror.setSelection({ line: lastLineIndex, ch: this.codeMirror.getLine(lastLineIndex).length });
-			} else {
-				this.codeMirror.setSelection({ line: 0, ch: 0 });
-			}
-			this.codeMirror.focus();
-		} else {
-			$(this).trigger("cursorShouldMoveToOtherWidget", direction);
-		}
-	};
-
 	TemplateWidget.prototype._renderTemplate = function() {
 		var $cm = $("<div />").addClass('CodeMirror cm-s-default CodeMirror-wrap'); 
 		var $cmScroll = $("<div />").addClass('CodeMirror-scroll').appendTo($cm); 
