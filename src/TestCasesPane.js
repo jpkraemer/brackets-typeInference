@@ -4,17 +4,18 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 					= require("./lib/lodash");
-	var Resizer 			= brackets.getModule("utils/Resizer");
-	var BeforeAfterWidget	= require("./BeforeAfterWidget");
-	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
-	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
-	var EditorManager		= brackets.getModule("editor/EditorManager");
-	var FunctionTracker		= require("./FunctionTracker");
-	var TemplateWidget		= require("./TemplateWidget");
-	var TestCasesProvider	= require("./TestCasesProvider");
-	var TestCaseWidget		= require("./TestCaseWidget");
-	var TIUtils				= require("./TIUtils");
+	var _ 							= require("./lib/lodash");
+	var Resizer 					= brackets.getModule("utils/Resizer");
+	var BeforeAfterWidget			= require("./BeforeAfterWidget");
+	var CodeMirror 					= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
+	var DocumentManager 			= brackets.getModule("document/DocumentManager"); 
+	var EditorManager				= brackets.getModule("editor/EditorManager");
+	var FunctionTracker				= require("./FunctionTracker");
+	var PreviousExecutionsWidget	= require("./PreviousExecutionsWidget");
+	var TemplateWidget				= require("./TemplateWidget");
+	var TestCasesProvider			= require("./TestCasesProvider");
+	var TestCaseWidget				= require("./TestCaseWidget");
+	var TIUtils						= require("./TIUtils");
 	
 	var EVENT_NAMESPACE = ".TestCasesPane"; 
 
@@ -62,8 +63,16 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.templateAddButtonClicked = function(event) {
 		this._insertNewTestcase({
 			functionIdentifier: this.functionIdentifier,
-			title: "New Test Case",
+			title: event.target.title,
 			code: event.target.code
+		});
+	};
+
+	TestCasesPane.prototype.previousExecutionsAddButtonClicked = function(event, index) {
+		this._insertNewTestcase({
+			functionIdentifier: this.functionIdentifier, 
+			title: event.target.title,
+			code: event.target.codeForSuggestionIndex(index)
 		});
 	};
 
@@ -163,7 +172,7 @@ define(function (require, exports, module) {
 			nextWidget = emittingWidgetSuite[nextWidgetIndex];	
 		}
 		
-		if (nextWidget !== undefined) {
+		if ((nextWidget !== undefined) && (nextWidget.focus !== undefined)) {
 			nextWidget.focus(direction);
 		}
 	};
@@ -208,6 +217,16 @@ define(function (require, exports, module) {
 		$(widget).on("cursorShouldMoveToOtherWidget", this.cursorShouldMoveToOtherWidget);
 		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
 		widgetsForCurrentSuite.push(widget);
+
+		$("<div />").addClass('ti-testSection')
+			.append($("<h2 />").text("From Last Execution"))
+			.append($("<span />").text("The template below can be autofilled with values from calls to the function traced by Theseus. The test can be fully customized after adding it to the test suite."))
+			.insertBefore(this.$pane.find(".ti-roundAddButton"));
+
+		widget = new PreviousExecutionsWidget(this.functionIdentifier);
+		$(widget).on("addButtonClicked", this.previousExecutionsAddButtonClicked); 
+		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
+		this.widgets.previousExecutions = [ widget ];
 
 		TestCasesProvider.getTestSuggestionsForFunctionIdentifier(this.functionIdentifier).done(function (testCaseSuggestions) {
 			var widgetsForSuggestions = []; 

@@ -376,6 +376,7 @@ define(function (require, exports, module) {
 				}).join(", ");
 				functionCall += ")";
 				template = template.replace(/__name__/, functionCall); 
+				template = template.replace(/__returnValue__/, "undefined");
 				return template;
 			};
 
