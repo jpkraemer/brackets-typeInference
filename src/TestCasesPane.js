@@ -22,7 +22,7 @@ define(function (require, exports, module) {
 	function TestCasesPane () {
 		_.bindAll(this);
 
-		this.widgets = {};
+		this.widgetsBySuite = {};
 
 		this.$pane = $(require("text!./templates/TestCasesPane.html"));
 		this.$scollView = this.$pane.find('.ti-scrollView');
@@ -49,7 +49,9 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.codeMirror = undefined;
 	TestCasesPane.prototype.currentFullEditor = undefined;
 	TestCasesPane.prototype.functionIdentifier = undefined;
-	TestCasesPane.prototype.widgets = undefined;
+	TestCasesPane.prototype.widgetsBySuite = undefined;
+	TestCasesPane.prototype.suggestionWidgets = undefined;
+	TestCasesPane.prototype.previousExecutionsWidget = undefined;
 
 	TestCasesPane.prototype.addTestButtonClicked = function(event) {
 		this._insertNewTestcase({
@@ -79,7 +81,7 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype._insertNewTestcase = function(testCase) {
 		var newWidget = new TestCaseWidget(TestCasesProvider.addTestCaseForPath(testCase, this.currentFullEditor.document.file.fullPath));
 
-		var widgetsForSuite = this.widgets[testCase.functionIdentifier]; 
+		var widgetsForSuite = this.widgetsBySuite[testCase.functionIdentifier]; 
 		newWidget.insertBefore(widgetsForSuite[widgetsForSuite.length - 1].$container);
 
 		widgetsForSuite.push(newWidget);
@@ -97,13 +99,29 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype.updateTestCases = function() {
-		TestCasesProvider.updateTestCase(
-			_(this.widgets).values().flatten(true).filter(function (widget) {
-				return ("testCase" in widget);
-			}).map(function(widget) {
-				return widget.testCase;
-			}).value()
-		);
+		_.forEach(this.widgetsBySuite, function (widgetsForSuite, suiteTitle) {
+			var testSuite = {
+				title: 	suiteTitle, 
+				tests: 	_(widgetsForSuite).filter(function (widget) {
+							return ("testCase" in widget);
+						}).map(function(widget) {
+							return widget.testCase;
+						}).value(),
+				beforeAll: {},
+				beforeEach: {},
+				afterEach: {}
+			};
+
+			var beforeAllWidget = _.find(widgetsForSuite, { mode: "beforeAll" });
+			var beforeEachWidget = _.find(widgetsForSuite, { mode: "before" });
+			var afterEachWidget = _.find(widgetsForSuite, { mode: "after" });
+
+			testSuite.beforeAll.code = beforeAllWidget !== undefined ? beforeAllWidget.code : "";
+			testSuite.beforeEach.code = beforeEachWidget !== undefined ? beforeEachWidget.code : "";
+			testSuite.afterEach.code = afterEachWidget !== undefined ? afterEachWidget.code : "";
+
+			TestCasesProvider.updateTestSuite(testSuite);
+		});
 	};
 
 	TestCasesPane.prototype.currentDocumentChanged = function(event, newDocument) {
@@ -132,7 +150,7 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.cursorShouldMoveToOtherWidget = function(event, direction) {
 		var emittingWidgetIndex = -1; 
 		var emittingSuiteName;
-		var emittingWidgetSuite = _.find(this.widgets, function (widgetArray, suiteName) {
+		var emittingWidgetSuite = _.find(this.widgetsBySuite, function (widgetArray, suiteName) {
 			var tmp = widgetArray.indexOf(event.target);
 			if (tmp > -1) {
 				emittingWidgetIndex = tmp; 
@@ -149,7 +167,7 @@ define(function (require, exports, module) {
 		}
 
 		var nextWidget;
-		var suites = _.keys(this.widgets);
+		var suites = _.keys(this.widgetsBySuite);
 		var emittingSuiteIndex = suites.indexOf(emittingSuiteName);
 		var nextSuite;
 
@@ -157,14 +175,14 @@ define(function (require, exports, module) {
 			(emittingSuiteIndex !== 0) && 
 			(direction === "up")) {
 
-			nextSuite = this.widgets[suites[emittingSuiteIndex - 1]]; 
+			nextSuite = this.widgetsBySuite[suites[emittingSuiteIndex - 1]]; 
 			nextWidget = _.last(nextSuite);
 
 		} else if (	(emittingWidgetIndex === emittingWidgetSuite.length - 1) && 
 					(emittingSuiteIndex !== suites.length - 1) && 
 					(direction === "down")) {
 
-			nextSuite = this.widgets[suites[emittingSuiteIndex + 1]];
+			nextSuite = this.widgetsBySuite[suites[emittingSuiteIndex + 1]];
 			nextWidget = _.first(nextSuite);
 
 		} else {
@@ -178,13 +196,23 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype._clear = function() {
-		_.each(this.widgets, function (widgetArray) {
+		_.each(this.widgetsBySuite, function (widgetArray) {
 			_.each(widgetArray, function (widget) {
 				widget.remove();	
 			});			
 		}); 
 
-		this.widgets = {};
+		_.each(this.suggestionWidgets, function (widget) {
+			widget.remove();
+		});
+
+		if (this.previousExecutionsWidget) {
+			this.previousExecutionsWidget.remove(); 
+			this.previousExecutionsWidget = undefined;
+		}
+
+		this.widgetsBySuite = {};
+		this.suggestionWidgets = [];
 
 		$(".ti-testSection").remove();
 	};
@@ -200,9 +228,14 @@ define(function (require, exports, module) {
 		}
 
 		var widgetsForCurrentSuite = [];
-		this.widgets[testSuite.title] = widgetsForCurrentSuite;
+		this.widgetsBySuite[testSuite.title] = widgetsForCurrentSuite;
 
-		var widget = new BeforeAfterWidget(testSuite.beforeEach.code, "before");
+		var widget = new BeforeAfterWidget(testSuite.beforeAll.code, "beforeAll");
+		$(widget).on("cursorShouldMoveToOtherWidget", this.cursorShouldMoveToOtherWidget);
+		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
+		widgetsForCurrentSuite.push(widget);
+
+		widget = new BeforeAfterWidget(testSuite.beforeEach.code, "before");
 		$(widget).on("cursorShouldMoveToOtherWidget", this.cursorShouldMoveToOtherWidget);
 		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
 		widgetsForCurrentSuite.push(widget);
@@ -232,12 +265,11 @@ define(function (require, exports, module) {
 		widget = new PreviousExecutionsWidget(this.functionIdentifier);
 		$(widget).on("addButtonClicked", this.previousExecutionsAddButtonClicked); 
 		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
-		this.widgets.previousExecutions = [ widget ];
+		this.previousExecutionsWidget = widget;
 
 		TestCasesProvider.getTestSuggestionsForFunctionIdentifier(this.functionIdentifier).done(function (testCaseSuggestions) {
-			var widgetsForSuggestions = []; 
+			this.suggestionWidgets = []; 
 			if (testCaseSuggestions.length > 0) {
-				this.widgets.suggestions = widgetsForSuggestions;
 				$("<div />").addClass('ti-testSection')
 					.append($("<h2 />").text("Suggestions"))
 					.append($("<span />").text("These templates can be prefilled with typical test data for your types and fully customized after adding them to the test suite."))
@@ -250,7 +282,7 @@ define(function (require, exports, module) {
 				widget.title = suggestion.title;
 				$(widget).on("addButtonClicked", this.templateAddButtonClicked);
 				widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
-				widgetsForSuggestions.push(widget);
+				this.suggestionWidgets.push(widget);
 			}
 		}.bind(this));
 	};

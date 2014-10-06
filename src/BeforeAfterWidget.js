@@ -22,7 +22,11 @@ define(function (require, exports, module) {
 
 		this.code = code;
 		this.mode = mode;
-		this.$caption.text(mode + "Each");
+		if (mode === "beforeAll") {
+			this.$caption.text("Spec Closure");
+		} else {
+			this.$caption.text(mode + "Each");
+		}
 		this.$container.find(".ti-header").addClass('ti-caption-immutable');
 	}
 

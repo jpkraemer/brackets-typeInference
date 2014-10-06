@@ -24,6 +24,19 @@ define(function (require, exports, module) {
 
 	var testCasesForCurrentDocument = {};
 	var SEPARATOR = "$$";
+	var testSuiteTemplate = {
+		title: "",
+		tests: [], 
+		beforeAll: {
+			code: ""
+		},
+		beforeEach: {
+			code: "function () {\n\n}"
+		},
+		afterEach: {
+			code: "function () {\n\n}"
+		}
+	};
 
 	function init () {
 		$(DocumentManager).on("currentDocumentChange", _currentDocumentChanged); 
@@ -118,23 +131,20 @@ define(function (require, exports, module) {
 						(node.expression.callee.name === "describe")) {
 
 						var functionIdentifier = node.expression.arguments[0].value;
-						testSuites[functionIdentifier] = {
-							title: node.expression.arguments[0].value,
-							tests: [], 
-							beforeEach: {
-								code: "function () {\n\n}"
-							},
-							afterEach: {
-								code: "function () {\n\n}"
-							}
-						};
+						testSuites[functionIdentifier] = _.cloneDeep(testSuiteTemplate);
+						testSuites[functionIdentifier].title = node.expression.arguments[0].value;
+
 						var individualTestsAst = node.expression.arguments[1].body.body; 
+						var beforeAllNodes = [];
+						var foundFirstJasmineNode = false;
 
 						_.forEach(individualTestsAst, function (node) {
 							var i;
 
 							if ((node.type === "ExpressionStatement") && (node.expression.type === "CallExpression")) {
 								if (node.expression.callee.name === "it") {
+									foundFirstJasmineNode = true;
+
 									var testFunctionLocation = node.expression.arguments[1].loc; 
 									var testFunctionLines = testSourceCodeLines.slice(testFunctionLocation.start.line - 1, testFunctionLocation.end.line);
 									testFunctionLines[0] = testFunctionLines[0].substr(testFunctionLocation.start.column); 
@@ -160,11 +170,20 @@ define(function (require, exports, module) {
 
 									testSuites[functionIdentifier].tests.push(testCase);
 								} else if (node.expression.callee.name === "beforeEach") {
+									foundFirstJasmineNode = true;
 									testSuites[functionIdentifier].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								} else if (node.expression.callee.name === "afterEach") {
+									foundFirstJasmineNode = true;
 									testSuites[functionIdentifier].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								}
+							} else if (! foundFirstJasmineNode) {
+								beforeAllNodes.push(node);
 							}
+						});
+
+						testSuites[functionIdentifier].beforeAll.code = Escodegen.generate({
+							type: "Program",
+							body: beforeAllNodes
 						});
 					}
 				});
@@ -241,6 +260,24 @@ define(function (require, exports, module) {
 		                ]
 		            }
 		        };
+
+		        if (testSuite.beforeAll && testSuite.beforeAll.code) {
+		        	//escoden will add a ; after the expression statement, so we need to remove an existing one
+		        	testSuite.beforeAll.code = testSuite.beforeAll.code.trim();
+		        	if (testSuite.beforeAll.code.substr(-1) === ";") {
+		        		testSuite.beforeAll.code = testSuite.beforeAll.code.slice(0, -1);
+		        	}
+		        	result.expression.arguments[1].body.body.unshift({
+		        		type: "ExpressionStatement", 
+		        		expression: {
+			        		type: "Literal",
+			        		xVerbatimProperty: {
+								content: testSuite.beforeAll.code || "",
+								precedence: Escodegen.Precedence.Primary
+							}
+						}
+		        	});
+		        }
 
 		        if (testSuite.beforeEach) {
 					result.expression.arguments[1].body.body.push({
@@ -428,15 +465,7 @@ define(function (require, exports, module) {
 
 		var testSuite = testCasesForCurrentDocument[testCase.functionIdentifier]; 
 		if (testSuite === undefined) {
-			testSuite = {
-				tests: [], 
-				beforeEach: {
-					code: "function () {\n\n}"
-				},
-				afterEach: {
-					code: "function () {\n\n}"
-				}
-			}; 
+			testSuite = _.cloneDeep(testSuiteTemplate);
 			testCasesForCurrentDocument[testCase.functionIdentifier] = testSuite;
 		}
 
@@ -467,11 +496,16 @@ define(function (require, exports, module) {
 		}
 	}
 
+	function updateTestSuite (testSuite) {
+		testCasesForCurrentDocument[testSuite.title] = testSuite; 
+	}
+
 	exports.init = init;
 	exports.getTestSuggestionsForFunctionIdentifier = getTestSuggestionsForFunctionIdentifier;
 	exports.getTestSuiteForFunctionIdentifier = getTestSuiteForFunctionIdentifier; 
 	exports.getTestCaseForFunctionIdentifierAndTestCaseId = getTestCaseForFunctionIdentifierAndTestCaseId; 
 	exports.addTestCaseForPath = addTestCaseForPath; 
 	exports.updateTestCase = updateTestCase;
+	exports.updateTestSuite = updateTestSuite;
 	exports.save = save;
 });
