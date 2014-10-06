@@ -8,11 +8,9 @@ define(function (require, exports, module) {
 	var Resizer 			= brackets.getModule("utils/Resizer");
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 							  require("./lib/runmode");
-	var ExtensionLoader 	= brackets.getModule("utils/ExtensionLoader");
+	var TheseusAgentWrapper	= require("./TheseusAgentWrapper");
 	var TestCasesProvider	= require("./TestCasesProvider");
 	var TIUtils				= require("./TIUtils");
-
-	var Agent 				= ExtensionLoader.getRequireContextForExtension("theseus")("./src/Agent");
 
 	/**
 	 * @constructor
@@ -24,12 +22,14 @@ define(function (require, exports, module) {
 		_.bindAll(this);
 
 		this._$container = $(require("text!./templates/CodeWidget.html"));
+		this.$callsTableWrapper = $("<div />").addClass('ti-callsTableWrapper');
+		this.$callsTableWrapper.insertAfter(this.$container.find(".ti-header"));
 
 		this.title = "should return correct result";
 		this.templateString = require("text!./templates/returnValueTest.txt");
 		this.functionIdentifier = functionIdentifier;
 
-		$(Agent).on("receivedScriptInfo", this._receivedScriptInfo);
+		this._theseusRegistrationId = TheseusAgentWrapper.registerForTheseusUpdates({ nodeId: this.functionIdentifier }, this._updateTheseusInformation);
 	}
 
 	PreviousExecutionsWidget.prototype.constructor = PreviousExecutionsWidget; 
@@ -51,6 +51,10 @@ define(function (require, exports, module) {
 			get: function () { return this.$container.find(".ti-caption"); },
 			set: function () { throw new Error("Cannot set $caption"); }
 		},
+		"$callsTableWrapper": {
+			get: function () { return this._$callsTableWrapper; },
+			set: function ($newCallsTableWrapper) { this._$callsTableWrapper = $newCallsTableWrapper; }
+		},
 		"templateString": {
 			get: function () { return this._templateString; },
 			set: function (newTemplateString) { this._templateString = newTemplateString; }
@@ -62,6 +66,14 @@ define(function (require, exports, module) {
 		"title": {
 			get: function () { return this.$caption.text(); },
 			set: function (newCaption) { this.$caption.text(newCaption); }
+		}, 
+		"suggestions": {
+			get: function () { return this._suggestions; }, 
+			set: function (newSuggestions) {
+				this._suggestions = newSuggestions; 
+				this._updateTemplate(); 
+				this._renderSuggestions();
+			}
 		}
 	});
 
@@ -69,13 +81,15 @@ define(function (require, exports, module) {
 	PreviousExecutionsWidget.prototype._$container 				= undefined;
 	PreviousExecutionsWidget.prototype._templateString 			= undefined;
 	PreviousExecutionsWidget.prototype._preparedTemplateString 	= undefined;
+	PreviousExecutionsWidget.prototype._theseusRegistrationId 	= undefined;
+	PreviousExecutionsWidget.prototype._suggestions 			= undefined;
 
 	PreviousExecutionsWidget.prototype.insertBefore = function(element, animate) {
 		this.$container.insertBefore(element); 
 	};
 
 	PreviousExecutionsWidget.prototype.remove = function() {
-		clearTimeout(this._intervalId);
+		TheseusAgentWrapper.unregisterForTheseusUpdates(this._theseusRegistrationId);
 
 		this.$container.remove();
 	};
@@ -166,7 +180,8 @@ define(function (require, exports, module) {
 	};
 
 	PreviousExecutionsWidget.prototype._renderSuggestions = function() {
-		var $callsTableWrapper = $("<div />").addClass('ti-callsTableWrapper');
+		this.$callsTableWrapper.empty();
+
 		var $callsTable = $("<table />");
 
 		var suggestionWithMaxArguments = _.max(this.suggestions, function (suggestion) {
@@ -193,52 +208,30 @@ define(function (require, exports, module) {
 			$("<td />").append($addButton).appendTo($tableRow);
 		}
 
-		$callsTable.appendTo($callsTableWrapper);
-
-		$callsTableWrapper.insertAfter(this.$container.find(".ti-header"));
+		$callsTable.appendTo(this.$callsTableWrapper);
 	};
 
-	PreviousExecutionsWidget.prototype._receivedScriptInfo = function(event, path) {
-		var functionsInFile = Agent.functionsInFile(path); 
 
-		if (_.pluck(functionsInFile, "id").indexOf(this.functionIdentifier) !== -1) {
-			Agent.trackLogs({
-				ids: [ this.functionIdentifier ],
-				exceptions: false
-			}, function (handle) {
-				this._handle = handle;
-				this._intervalId = setInterval(this._updateTheseusInformation, 500);
-			}.bind(this));
+	PreviousExecutionsWidget.prototype._updateTheseusInformation = function(results) {
+		var newSuggestions = [];
+		
+		var argumentMappingFunction = function (argument) {
+			return {
+				name: argument.name,
+				value: argument.value.json
+			};
+		};
+
+		for (var i = 0; i < results.length; i++) {
+			var result = results[i]; 
+			var suggestion = {
+				arguments: _.map(result.arguments, argumentMappingFunction),
+				returnValue: result.returnValue.json
+			};
+			newSuggestions.push(suggestion);
 		}
-	};
 
-	PreviousExecutionsWidget.prototype._updateTheseusInformation = function() {
-		if (Agent.isReady()) {
-			Agent.refreshLogs(this._handle, 20, function (results) {
-				if (results.length > 0) {
-					this.suggestions = [];
-					var argumentMappingFunction = function (argument) {
-						return {
-							name: argument.name,
-							value: argument.value.json
-						};
-					};
-					for (var i = 0; i < results.length; i++) {
-						var result = results[i]; 
-
-						var suggestion = {
-							arguments: _.map(result.arguments, argumentMappingFunction),
-							returnValue: result.returnValue.json
-						};
-
-						this.suggestions.push(suggestion);
-					}
-
-					this._renderSuggestions();
-					this._updateTemplate();
-				}				
-			}.bind(this));
-		}
+		this.suggestions = newSuggestions;
 	};
 
 	module.exports = PreviousExecutionsWidget;  

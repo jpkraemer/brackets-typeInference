@@ -17,6 +17,7 @@ define(function (require, exports, module) {
 	var SessionExtensions 			= require("./src/SessionExtensions");
 	var TestCasesPane				= require("./src/TestCasesPane");
 	var TestCasesProvider			= require("./src/TestCasesProvider");
+	var TheseusAgentWrapper 		= require("./src/TheseusAgentWrapper");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
 	var TIUtils 					= require("./src/TIUtils");
@@ -38,6 +39,7 @@ define(function (require, exports, module) {
 			mergeAutomaticUpdatesConservatively: true
 		});
 
+		TheseusAgentWrapper.init();
 		TheseusTypeProvider.init();
 		JSDocTypeProvider.init();
 		FunctionTracker.init();

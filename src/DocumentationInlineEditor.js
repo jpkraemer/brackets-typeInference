@@ -11,6 +11,7 @@ define(function (require, exports, module) {
     var Editor                         = brackets.getModule("editor/Editor").Editor;
 	var InlineWidget 			       = brackets.getModule("editor/InlineWidget").InlineWidget;
     var JSDocTypeProvider              = require("./JSDocTypeProvider");
+    var TheseusAgentWrapper            = require("./TheseusAgentWrapper");
     var TheseusTypeProvider            = require("./TheseusTypeProvider");
     var TypeInformationHTMLRenderer    = require("./TypeInformationHTMLRenderer");
     var TypeInformationJSDocRenderer   = require("./TypeInformationJSDocRenderer");
@@ -471,7 +472,7 @@ define(function (require, exports, module) {
     * @param  {object} event               
     */
    DocumentationInlineEditor.prototype._showCallLocationClickHandler = function(theseusInvocationId, event) {
-        TheseusTypeProvider.callingInvocationForFunctionInvocation(theseusInvocationId).done(function (caller) {
+        TheseusAgentWrapper.callingInvocationForFunctionInvocation(theseusInvocationId).done(function (caller) {
             this.hostEditor.setCursorPos(caller.range.end.line - 1, caller.range.end.ch, true);
             this.hostEditor.focus();
 
