@@ -177,8 +177,7 @@ define(function (require, exports, module) {
 		}
 	};
 
-	TestCasesPane.prototype._update = function() {
-		this.updateTestCases();
+	TestCasesPane.prototype._clear = function() {
 		_.each(this.widgets, function (widgetArray) {
 			_.each(widgetArray, function (widget) {
 				widget.remove();	
@@ -186,6 +185,13 @@ define(function (require, exports, module) {
 		}); 
 
 		this.widgets = {};
+
+		$(".ti-testSection").remove();
+	};
+
+	TestCasesPane.prototype._update = function() {
+		this.updateTestCases();
+		this._clear();
 
 		var testSuite = TestCasesProvider.getTestSuiteForFunctionIdentifier(this.functionIdentifier);
 
