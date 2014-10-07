@@ -4,13 +4,13 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 					= require("./lib/lodash");
-	var CodeWidget			= require("./CodeWidget");
-	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
-	var EditorManager 		= brackets.getModule("editor/EditorManager");
-	var ProjectManger		= brackets.getModule("project/ProjectManager");
-	var TestCasesProvider	= require("./TestCasesProvider");
-	var TIUtils 			= require("./TIUtils");
+	var _ 							= require("./lib/lodash");
+	var CodeWidget					= require("./CodeWidget");
+	var DocumentManager 			= brackets.getModule("document/DocumentManager"); 
+	var EditorManager 				= brackets.getModule("editor/EditorManager");
+	var ProjectManger				= brackets.getModule("project/ProjectManager");
+	var TestCaseCollectionManager	= require("./TestCaseCollectionManager");
+	var TIUtils 					= require("./TIUtils");
 
 	/**
 	 * @constructor
@@ -30,7 +30,7 @@ define(function (require, exports, module) {
 
 		//configure behavior
 		this.testCase = testCase;
-		$(TestCasesProvider).on("updatedTestResults", this.didUpdateTestResults);
+		$(TestCaseCollectionManager).on("updatedTestResults", this.didUpdateTestResults);
 		this.$caption.on("click", this._onCaptionClicked); 
 		this.$caption.on("keydown", this._onCaptionKeydown); 
 	}

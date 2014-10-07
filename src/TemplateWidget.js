@@ -9,7 +9,6 @@ define(function (require, exports, module) {
 	var CodeMirror 			= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 							  require("./lib/runmode");
 	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
-	var TestCasesProvider	= require("./TestCasesProvider");
 	var TIUtils				= require("./TIUtils");
 
 	/**

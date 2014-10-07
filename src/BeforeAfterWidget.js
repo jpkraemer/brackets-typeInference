@@ -7,7 +7,6 @@ define(function (require, exports, module) {
 	var _ 					= require("./lib/lodash");
 	var CodeWidget			= require("./CodeWidget");
 	var DocumentManager 	= brackets.getModule("document/DocumentManager"); 
-	var TestCasesProvider	= require("./TestCasesProvider");
 
 	/**
 	 * @constructor

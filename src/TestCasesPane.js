@@ -13,7 +13,8 @@ define(function (require, exports, module) {
 	var FunctionTracker				= require("./FunctionTracker");
 	var PreviousExecutionsWidget	= require("./PreviousExecutionsWidget");
 	var TemplateWidget				= require("./TemplateWidget");
-	var TestCasesProvider			= require("./TestCasesProvider");
+	var TestCaseCollectionManager	= require("./TestCaseCollectionManager");
+	var TestCaseSuggestionGenerator = require("./TestCaseSuggestionGenerator");
 	var TestCaseWidget				= require("./TestCaseWidget");
 	var TIUtils						= require("./TIUtils");
 	
@@ -38,8 +39,6 @@ define(function (require, exports, module) {
 		this.currentDocumentChanged(null, DocumentManager.getCurrentDocument());
 
 		$(DocumentManager).on("documentSaved", this.documentSaved);
-
-		$(TestCasesProvider).on("didLoadTestsForCurrentDocument", this._update);
 	}
 
 	TestCasesPane.prototype.constructor = TestCasesPane; 
@@ -52,6 +51,8 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.widgetsBySuite = undefined;
 	TestCasesPane.prototype.suggestionWidgets = undefined;
 	TestCasesPane.prototype.previousExecutionsWidget = undefined;
+
+	TestCasesPane.prototype.testCaseCollection = undefined;
 
 	TestCasesPane.prototype.addTestButtonClicked = function(event) {
 		this._insertNewTestcase({
@@ -79,7 +80,7 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype._insertNewTestcase = function(testCase) {
-		var newWidget = new TestCaseWidget(TestCasesProvider.addTestCaseForPath(testCase, this.currentFullEditor.document.file.fullPath));
+		var newWidget = new TestCaseWidget(this.testCaseCollection.addTestCaseToSuite(testCase, this.functionIdentifier));
 
 		var widgetsForSuite = this.widgetsBySuite[testCase.functionIdentifier]; 
 		newWidget.insertBefore(widgetsForSuite[widgetsForSuite.length - 1].$container);
@@ -94,7 +95,7 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.documentSaved = function(event, doc) {
 		if (DocumentManager.getCurrentDocument() === doc) { 
 			this.updateTestCases();
-			TestCasesProvider.save();
+			this.testCaseCollection.save();
 		}
 	};
 
@@ -120,11 +121,13 @@ define(function (require, exports, module) {
 			testSuite.beforeEach.code = beforeEachWidget !== undefined ? beforeEachWidget.code : "";
 			testSuite.afterEach.code = afterEachWidget !== undefined ? afterEachWidget.code : "";
 
-			TestCasesProvider.updateTestSuite(testSuite);
+			this.testCaseCollection.updateTestSuite(testSuite);
 		});
 	};
 
 	TestCasesPane.prototype.currentDocumentChanged = function(event, newDocument) {
+		this.testCaseCollection = TestCaseCollectionManager.getGeneratedTestCaseCollectionForPath(newDocument.file.fullPath);
+
 		var newFullEditor = EditorManager.getCurrentFullEditor(); 
 
 		if (this.currentFullEditor !== newFullEditor) {
@@ -143,7 +146,7 @@ define(function (require, exports, module) {
 		var newFunctionIdentifier = FunctionTracker.functionIdAtLocationInDocument(pos, this.currentFullEditor.document);
 		if (this.functionIdentifier !== newFunctionIdentifier) {
 			this.functionIdentifier = newFunctionIdentifier;
-			this._update(); 
+			this.testCaseCollection.loadingPromise.done(this._update);
 		}
 	};
 
@@ -221,7 +224,7 @@ define(function (require, exports, module) {
 		this.updateTestCases();
 		this._clear();
 
-		var testSuite = TestCasesProvider.getTestSuiteForFunctionIdentifier(this.functionIdentifier);
+		var testSuite = this.testCaseCollection.getTestSuiteForTitle(this.functionIdentifier, true);
 
 		if (testSuite === undefined) {
 			return;
@@ -267,7 +270,7 @@ define(function (require, exports, module) {
 		widget.insertBefore(this.$pane.find('.ti-roundAddButton'));
 		this.previousExecutionsWidget = widget;
 
-		TestCasesProvider.getTestSuggestionsForFunctionIdentifier(this.functionIdentifier).done(function (testCaseSuggestions) {
+		TestCaseSuggestionGenerator.getTestSuggestionsForFunctionIdentifier(this.functionIdentifier).done(function (testCaseSuggestions) {
 			this.suggestionWidgets = []; 
 			if (testCaseSuggestions.length > 0) {
 				$("<div />").addClass('ti-testSection')
