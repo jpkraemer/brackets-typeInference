@@ -122,7 +122,7 @@ define(function (require, exports, module) {
 			testSuite.afterEach.code = afterEachWidget !== undefined ? afterEachWidget.code : "";
 
 			this.testCaseCollection.updateTestSuite(testSuite);
-		});
+		}.bind(this));
 	};
 
 	TestCasesPane.prototype.currentDocumentChanged = function(event, newDocument) {
@@ -223,7 +223,10 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype._update = function() {
 		this.updateTestCases();
 		this._clear();
-
+		if (this.functionIdentifier === undefined) {
+			return; 
+		}
+		
 		var testSuite = this.testCaseCollection.getTestSuiteForTitle(this.functionIdentifier, true);
 
 		if (testSuite === undefined) {

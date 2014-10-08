@@ -16,7 +16,7 @@ define(function (require, exports, module) {
 	var ScopeManagerExtensions 		= require("./src/ScopeManagerExtensions");
 	var SessionExtensions 			= require("./src/SessionExtensions");
 	var TestCasesPane				= require("./src/TestCasesPane");
-	var TestCasesProvider			= require("./src/TestCasesProvider");
+	var TestCaseCollectionManager	= require("./src/TestCaseCollectionManager");
 	var TheseusAgentWrapper 		= require("./src/TheseusAgentWrapper");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
@@ -43,7 +43,7 @@ define(function (require, exports, module) {
 		TheseusTypeProvider.init();
 		JSDocTypeProvider.init();
 		FunctionTracker.init();
-		TestCasesProvider.init();
+		TestCaseCollectionManager.init();
 
 		//initialize overwrites
 		ScopeManagerExtensions.init();
