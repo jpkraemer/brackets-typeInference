@@ -111,6 +111,8 @@
 							}
 						});
 					});
+				} else {
+					collectingTheseusInfoPromise.resolve(testCaseNameCache);
 				}
 			});
 
@@ -124,27 +126,29 @@
 				var parseTestSuiteFromXML = function (err, xml) {
 					for (var j = 0; j < xml.testsuites.testsuite.length; j++) {
 						var testsuite = xml.testsuites.testsuite[j]; 
-						var resultTestCases = []; 
+						if (testsuite.testcase !== undefined) {
+							var resultTestCases = []; 
 
-						for (var k = 0; k < testsuite.testcase.length; k++) {
-							var testcase = testsuite.testcase[k];
-							var testcaseNameComponents = testcase.$.name.split(SEPARATOR); 
-							var newTestResult = {
-								id: testcaseNameComponents[0],
-								title: testcaseNameComponents.slice(1).join(SEPARATOR),
-								time: testcase.$.time,
-								success: ! testcase.hasOwnProperty("failure")
-							};
+							for (var k = 0; k < testsuite.testcase.length; k++) {
+								var testcase = testsuite.testcase[k];
+								var testcaseNameComponents = testcase.$.name.split(SEPARATOR); 
+								var newTestResult = {
+									id: testcaseNameComponents[0],
+									title: testcaseNameComponents.slice(1).join(SEPARATOR),
+									time: testcase.$.time,
+									success: ! testcase.hasOwnProperty("failure")
+								};
 
-							if (! newTestResult.success) {
-								newTestResult.failure = testcase.failure[0].$;
-								newTestResult.failure.backtrace = testcase.failure[0]._; 
+								if (! newTestResult.success) {
+									newTestResult.failure = testcase.failure[0].$;
+									newTestResult.failure.backtrace = testcase.failure[0]._; 
+								}
+
+								resultTestCases.push(newTestResult);
 							}
 
-							resultTestCases.push(newTestResult);
+							result[testsuite.$.name] = resultTestCases;
 						}
-
-						result[testsuite.$.name] = resultTestCases;
 					}
 				};
 
