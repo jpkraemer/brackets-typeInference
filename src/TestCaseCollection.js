@@ -15,19 +15,6 @@ define(function (require, exports, module) {
 	var TIUtils					= require("./TIUtils");
 
 	var SEPARATOR = "$$";
-	var testSuiteTemplate = {
-		title: "",
-		tests: [], 
-		beforeAll: {
-			code: ""
-		},
-		beforeEach: {
-			code: "function () {\n\n}"
-		},
-		afterEach: {
-			code: "function () {\n\n}"
-		}
-	};
 
 	function TestCaseCollection(name, basePath) {
 		this._testSuites = {};
@@ -43,6 +30,20 @@ define(function (require, exports, module) {
 	}
 
 	TestCaseCollection.prototype.constructor = TestCaseCollection; 
+
+	TestCaseCollection.prototype.testSuiteTemplate = {
+		title: "",
+		tests: [], 
+		beforeAll: {
+			code: ""
+		},
+		beforeEach: {
+			code: "function () {\n\n}"
+		},
+		afterEach: {
+			code: "function () {\n\n}"
+		}
+	};
 
 	TestCaseCollection.prototype.file = undefined; 
 	TestCaseCollection.prototype._testSuites = undefined; 
@@ -65,7 +66,7 @@ define(function (require, exports, module) {
 		}
 
 		if ((createIfNecessary) && (this.testSuites[title] === undefined)) {
-			this.testSuites[title] = _.cloneDeep(testSuiteTemplate);
+			this.testSuites[title] = _.cloneDeep(this.testSuiteTemplate);
 			this.testSuites[title].title = title;
 		}
 
@@ -89,12 +90,7 @@ define(function (require, exports, module) {
 			return;
 		}
 
-		var testSuite = this.getTestSuiteForTitle(title);
-		if (testSuite === undefined) {
-			testSuite = _.cloneDeep(testSuiteTemplate);
-			testSuite.title = title;
-			this._testSuites[title] = testSuite;
-		}
+		var testSuite = this.getTestSuiteForTitle(title, true);
 
 		do {
 			testCase.id = Math.random().toString(36).substr(2,10); 
@@ -164,7 +160,7 @@ define(function (require, exports, module) {
 						(node.expression.callee.name === "describe")) {
 
 						var functionIdentifier = node.expression.arguments[0].value;
-						testSuites[functionIdentifier] = _.cloneDeep(testSuiteTemplate);
+						testSuites[functionIdentifier] = _.cloneDeep(this.testSuiteTemplate);
 						testSuites[functionIdentifier].title = node.expression.arguments[0].value;
 
 						var individualTestsAst = node.expression.arguments[1].body.body; 
@@ -219,14 +215,14 @@ define(function (require, exports, module) {
 							body: beforeAllNodes
 						});
 					}
-				});
+				}.bind(this));
 			} catch (e) {
 				TIUtils.log("Invalid contents of generated test file.");
 				throw e;
 			}
 
 			result.resolve(testSuites);
-		});
+		}.bind(this));
 
 		return result.promise();
 	};
@@ -234,123 +230,7 @@ define(function (require, exports, module) {
 	TestCaseCollection.prototype.save = function () {
 		var resultAst = {
 		    type: "Program",
-		    body: _.map(this.testSuites, function (testSuite, suiteName) {
-				var result = {
-		            type: "ExpressionStatement",
-		            expression: {
-		                type: "CallExpression",
-		                callee: {
-		                    type: "Identifier",
-		                    name: "describe"
-		                },
-		                arguments: [
-		                    {
-		                        type: "Literal",
-		                        value: suiteName,
-		                    },
-		                    {
-		                        type: "FunctionExpression",
-		                        id: null,
-		                        params: [],
-		                        defaults: [],
-		                        body: {
-		                            type: "BlockStatement",
-		                            body: _.map(testSuite.tests, function (testCase) {
-						        		return {
-							            type: "ExpressionStatement",
-							            expression: {
-							                type: "CallExpression",
-							                callee: {
-							                    type: "Identifier",
-							                    name: "it"
-							                },
-							                arguments: [
-							                    {
-							                        type: "Literal",
-							                        value: testCase.id + SEPARATOR + testCase.title,
-							                    },
-							                    {
-						                        	type: "Literal",
-						                        	xVerbatimProperty: {
-						                            	content: testCase.code || "",
-						                            	precedence: Escodegen.Precedence.Primary
-						                            }
-							                    }
-							                ]
-							            }
-							        };})
-		                        },
-		                        rest: null,
-		                        generator: false,
-		                        expression: false
-		                    }
-		                ]
-		            }
-		        };
-
-		        if (testSuite.beforeAll && testSuite.beforeAll.code) {
-		        	//escoden will add a ; after the expression statement, so we need to remove an existing one
-		        	testSuite.beforeAll.code = testSuite.beforeAll.code.trim();
-		        	if (testSuite.beforeAll.code.substr(-1) === ";") {
-		        		testSuite.beforeAll.code = testSuite.beforeAll.code.slice(0, -1);
-		        	}
-		        	result.expression.arguments[1].body.body.unshift({
-		        		type: "ExpressionStatement", 
-		        		expression: {
-			        		type: "Literal",
-			        		xVerbatimProperty: {
-								content: testSuite.beforeAll.code || "",
-								precedence: Escodegen.Precedence.Primary
-							}
-						}
-		        	});
-		        }
-
-		        if (testSuite.beforeEach) {
-					result.expression.arguments[1].body.body.push({
-						type: "ExpressionStatement",
-						expression: {
-							type: "CallExpression",
-							callee: {
-								type: "Identifier",
-								name: "beforeEach"
-							},
-							arguments: [
-							{
-								type: "Literal",
-								xVerbatimProperty: {
-									content: testSuite.beforeEach.code || "",
-									precedence: Escodegen.Precedence.Primary
-								}
-							}
-							]
-						}
-					});
-		        }
-		        
-		        if (testSuite.afterEach) {
-					result.expression.arguments[1].body.body.push({
-						type: "ExpressionStatement",
-						expression: {
-							type: "CallExpression",
-							callee: {
-								type: "Identifier",
-								name: "afterEach"
-							},
-							arguments: [
-							{
-								type: "Literal",
-								xVerbatimProperty: {
-									content: testSuite.afterEach.code || "",
-									precedence: Escodegen.Precedence.Primary
-								}
-							}
-							]
-						}
-					});
-		        }
-		        return result;
-	        })
+		    body: _.map(this.testSuites, this._generateAstForSuite)
 		};
 
 		var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 
@@ -358,6 +238,124 @@ define(function (require, exports, module) {
 		this.file.write(code, function () {
 			// _currentDocumentChanged();
 		});
+	};
+
+	TestCaseCollection.prototype._generateAstForSuite = function(testSuite) {
+		var result = {
+            type: "ExpressionStatement",
+            expression: {
+                type: "CallExpression",
+                callee: {
+                    type: "Identifier",
+                    name: "describe"
+                },
+                arguments: [
+                    {
+                        type: "Literal",
+                        value: testSuite.title,
+                    },
+                    {
+                        type: "FunctionExpression",
+                        id: null,
+                        params: [],
+                        defaults: [],
+                        body: {
+                            type: "BlockStatement",
+                            body: _.map(testSuite.tests, function (testCase) {
+				        		return {
+					            type: "ExpressionStatement",
+					            expression: {
+					                type: "CallExpression",
+					                callee: {
+					                    type: "Identifier",
+					                    name: "it"
+					                },
+					                arguments: [
+					                    {
+					                        type: "Literal",
+					                        value: testCase.id + SEPARATOR + testCase.title,
+					                    },
+					                    {
+				                        	type: "Literal",
+				                        	xVerbatimProperty: {
+				                            	content: testCase.code || "",
+				                            	precedence: Escodegen.Precedence.Primary
+				                            }
+					                    }
+					                ]
+					            }
+					        };})
+                        },
+                        rest: null,
+                        generator: false,
+                        expression: false
+                    }
+                ]
+            }
+        };
+
+        if (testSuite.beforeAll && testSuite.beforeAll.code) {
+        	//escoden will add a ; after the expression statement, so we need to remove an existing one
+        	testSuite.beforeAll.code = testSuite.beforeAll.code.trim();
+        	if (testSuite.beforeAll.code.substr(-1) === ";") {
+        		testSuite.beforeAll.code = testSuite.beforeAll.code.slice(0, -1);
+        	}
+        	result.expression.arguments[1].body.body.unshift({
+        		type: "ExpressionStatement", 
+        		expression: {
+	        		type: "Literal",
+	        		xVerbatimProperty: {
+						content: testSuite.beforeAll.code || "",
+						precedence: Escodegen.Precedence.Primary
+					}
+				}
+        	});
+        }
+
+        if (testSuite.beforeEach) {
+			result.expression.arguments[1].body.body.push({
+				type: "ExpressionStatement",
+				expression: {
+					type: "CallExpression",
+					callee: {
+						type: "Identifier",
+						name: "beforeEach"
+					},
+					arguments: [
+					{
+						type: "Literal",
+						xVerbatimProperty: {
+							content: testSuite.beforeEach.code || "",
+							precedence: Escodegen.Precedence.Primary
+						}
+					}
+					]
+				}
+			});
+        }
+        
+        if (testSuite.afterEach) {
+			result.expression.arguments[1].body.body.push({
+				type: "ExpressionStatement",
+				expression: {
+					type: "CallExpression",
+					callee: {
+						type: "Identifier",
+						name: "afterEach"
+					},
+					arguments: [
+					{
+						type: "Literal",
+						xVerbatimProperty: {
+							content: testSuite.afterEach.code || "",
+							precedence: Escodegen.Precedence.Primary
+						}
+					}
+					]
+				}
+			});
+        }
+	    return result;
 	};
 
 	module.exports = TestCaseCollection;
