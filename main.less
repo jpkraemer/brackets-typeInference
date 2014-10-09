@@ -1,3 +1,15 @@
+.ti-centerHoriz { 
+	margin-left: auto;
+	margin-right: auto;
+	text-align: center;
+}
+
+.ti-centerVertical {
+	position: relative;
+	top: 25%;
+	// -webkit-transform: translateY(-50%);
+}
+
 .ti-documentation-container {
 	padding-top: 5px;
 	padding-bottom: 10px;
@@ -145,6 +157,7 @@ a.ti-alert {
 	overflow: auto;
 	width: 47%;
 	height: 100%;
+	border-left: 1px solid #a6a6a6;
 }
 
 #ti-testCasesPane {
@@ -312,6 +325,84 @@ a.ti-alert {
 		background-size: 12px;
 		background-color: inherit;
 	}
+}
+
+.ti-dropdown { 
+	display: inline-block;
+	position: relative;
+	z-index: 5;
+
+	margin-left: 3px;
+	margin-right: 3px;
+
+	span {
+		line-height: 23px;
+		height: inherit;
+		margin-bottom: 2px;
+		padding: 1px 8px;
+		-webkit-padding-end: 17px;
+		width: auto;
+
+		background-image: url(./img/down-arrow.svg); 
+		background-position: center right;
+		background-repeat: no-repeat;
+		background-size: 12px;
+		background-color: inherit;
+
+		font-size: 14px;
+
+		border: 1px solid #ccc; 
+		border-radius: 3px;
+	}
+
+	div {
+		position: absolute;
+		top: 21px;
+		right: 0;
+		background-color: #f8f8f8;
+
+		border-bottom-right-radius: 3px; 
+		border-bottom-left-radius: 3px;
+		border: 1px solid #ccc;
+		border-top: none;
+		border-collapse: collapse;
+
+		width: 350px;
+	}
+
+	li {
+		list-style-type: none;
+	}
+
+	input {
+		width: 80%;
+		margin: 0 auto;
+		line-height: 18px;
+	}
+
+	a {
+		display: block;
+		padding: 0;
+		margin: 0; 
+		line-height: 24px;
+		border-top: 1px solid #ccc;
+		border-collapse: collapse;
+		color: #333;
+	}
+
+	a:hover {
+		background-color: #eee;
+		text-decoration: none;
+	}
+
+	a :first {
+		border-top: none;
+	}
+}
+
+.ti-testCasesPaneHeader {
+	background-color: #f8f8f8;
+	height: 40px;
 }
 
 .ti-suggestion {

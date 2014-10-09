@@ -60,6 +60,10 @@ define(function (require, exports, module) {
 		}
 	});
 
+	TestCaseCollection.prototype.getTestSuiteTitles = function () {
+		return _.pluck(this.testSuites, "title");
+	};
+
 	TestCaseCollection.prototype.getTestSuiteForTitle = function (title, createIfNecessary) {
 		if (createIfNecessary === undefined) {
 			createIfNecessary = false;
