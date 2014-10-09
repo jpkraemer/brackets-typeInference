@@ -222,7 +222,12 @@ define(function (require, exports, module) {
 			}
 
 			result.resolve(testSuites);
-		}.bind(this));
+		}.bind(this)).fail(function (err) {
+			if (err === "NotFound") {
+				//happens for newly created files that do not yet exist on disk
+				result.resolve({});
+			}
+		});
 
 		return result.promise();
 	};
