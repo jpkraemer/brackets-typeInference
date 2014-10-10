@@ -21,6 +21,7 @@ define(function (require, exports, module) {
 
 	function init () {
 		$(ProjectManager).on("projectOpen", _onProjectOpen);
+		_onProjectOpen();
 
 		var $button = $("<a />").attr({
 			id: "ti-runTests-toolbar-button",
@@ -92,7 +93,7 @@ define(function (require, exports, module) {
 		var specDir = FileSystem.getDirectoryForPath(specPath);
 		specDir.getContents(function (error, entries, stats, entryErrors) {
 			for (var i = entries.length - 1; i >= 0; i--) {
-				var entryPath = entries[i].path;
+				var entryPath = entries[i].fullPath;
 				var entryName = FileUtils.getBaseName(entryPath);
 				var entryMatch = entryName.match(/(.*)Spec\.js$/);
 				if (entryMatch !== null) {
