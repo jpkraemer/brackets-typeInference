@@ -86,7 +86,25 @@ define(function (require, exports, module) {
 	TemplateWidget.prototype._suggestions 		= undefined;
 
 	TemplateWidget.prototype.insertBefore = function(element, animate) {
-		this.$container.insertBefore(element); 
+		this._addToDom(function () {
+			this.$container.insertBefore(element);
+		}.bind(this), animate);
+	};
+
+	TemplateWidget.prototype.appendTo = function(element, animate) {
+		this._addToDom(function () {
+			this.$container.appendTo(element);
+		}.bind(this), animate);
+	};
+
+	TemplateWidget.prototype._addToDom = function(insertionCallback, animate) {
+		if (! animate) {
+			insertionCallback();
+		} else {
+			this.$container.hide();
+			insertionCallback();
+			this.$container.slideDown('fast');
+		}
 	};
 
 	TemplateWidget.prototype.remove = function() {

@@ -77,11 +77,23 @@ define(function (require, exports, module) {
 	};
 
 	CodeWidget.prototype.insertBefore = function(element, animate) {
+		this._addToDom(function () {
+			this.$container.insertBefore(element);
+		}.bind(this), animate);
+	};
+
+	CodeWidget.prototype.appendTo = function(element, animate) {
+		this._addToDom(function () {
+			this.$container.appendTo(element);
+		}.bind(this), animate);
+	};
+
+	CodeWidget.prototype._addToDom = function(insertionCallback, animate) {
 		if (! animate) {
-			this.$container.insertBefore(element); 
+			insertionCallback();
 		} else {
 			this.$container.height(0); 
-			this.$container.insertBefore(element);
+			insertionCallback();
 
 			this.codeMirror.on("update", function () {
 				if (this.$container.find('.ti-header').outerHeight() >= 46) {
