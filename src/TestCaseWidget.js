@@ -87,6 +87,7 @@ define(function (require, exports, module) {
 				this.code = this._testCase.code;
 				this.$caption.text(this._testCase.title);
 				this.isSuggestion = this._testCase.isSuggestion || false;
+				this.didUpdateTestResults();
 			}
 		},
 		"testResult": {
@@ -171,9 +172,10 @@ define(function (require, exports, module) {
 		}
  	};
 
-	TestCaseWidget.prototype.didUpdateTestResults = function(event, results) {
-		if (results[this.testCase.functionIdentifier]) {
-			var testResult = _.find(results[this.testCase.functionIdentifier], { id: this.testCase.id });
+	TestCaseWidget.prototype.didUpdateTestResults = function(event) {
+		var results = TestCaseCollectionManager.getLastTestResults();
+		if (results[this.testCase.suiteName]) {
+			var testResult = _.find(results[this.testCase.suiteName], { id: this.testCase.id });
 			if (testResult !== undefined) {
 				this.testResult = testResult;
 			}

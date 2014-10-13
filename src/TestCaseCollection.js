@@ -90,12 +90,13 @@ define(function (require, exports, module) {
 
 	TestCaseCollection.prototype.addTestCaseToSuite = function (testCase, title) {
 		if (this.getTestCaseForSuiteTitleAndTestCaseId(title, testCase.id) !== undefined) {
-			TIUtils.log("Test Case with id: " + testCase.id + "already exists for function identifier: "+ testCase.functionIdentifier); 
+			TIUtils.log("Test Case with id: " + testCase.id + "already exists for suite title: "+ title); 
 			return;
 		}
 
 		var testSuite = this.getTestSuiteForTitle(title, true);
 
+		testCase.suiteName = title;
 		do {
 			testCase.id = Math.random().toString(36).substr(2,10); 
 		} while (_.find(testSuite.tests, { id: testCase.id }) !== undefined); 
@@ -163,9 +164,9 @@ define(function (require, exports, module) {
 						(node.expression.type === "CallExpression") &&
 						(node.expression.callee.name === "describe")) {
 
-						var functionIdentifier = node.expression.arguments[0].value;
-						testSuites[functionIdentifier] = _.cloneDeep(this.testSuiteTemplate);
-						testSuites[functionIdentifier].title = node.expression.arguments[0].value;
+						var suiteName = node.expression.arguments[0].value;
+						testSuites[suiteName] = _.cloneDeep(this.testSuiteTemplate);
+						testSuites[suiteName].title = node.expression.arguments[0].value;
 
 						var individualTestsAst = node.expression.arguments[1].body.body; 
 						var beforeAllNodes = [];
@@ -195,26 +196,26 @@ define(function (require, exports, module) {
 
 									var testCase = {
 										id: literalTestCaseNameComponents[0],
-										functionIdentifier: functionIdentifier,
+										suiteName: suiteName,
 										title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
 										code: extractCodeFromLocation(node, node.expression.arguments[1].loc),
 										sourceLocation: node.expression.arguments[1].loc
 									};
 
-									testSuites[functionIdentifier].tests.push(testCase);
+									testSuites[suiteName].tests.push(testCase);
 								} else if (node.expression.callee.name === "beforeEach") {
 									foundFirstJasmineNode = true;
-									testSuites[functionIdentifier].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+									testSuites[suiteName].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								} else if (node.expression.callee.name === "afterEach") {
 									foundFirstJasmineNode = true;
-									testSuites[functionIdentifier].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+									testSuites[suiteName].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								}
 							} else if (! foundFirstJasmineNode) {
 								beforeAllNodes.push(node);
 							}
 						});
 
-						testSuites[functionIdentifier].beforeAll.code = Escodegen.generate({
+						testSuites[suiteName].beforeAll.code = Escodegen.generate({
 							type: "Program",
 							body: beforeAllNodes
 						});
