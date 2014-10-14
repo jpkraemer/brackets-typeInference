@@ -18,6 +18,8 @@ define(function (require, exports, module) {
 	function CodeWidget () {
 		_.bindAll(this);
 
+		this._focusedByCursorMovement = false;
+
 		this._$container = $(require("text!./templates/CodeWidget.html"));
 
 		var $localEditorHolder = this.$container.find(".ti-editorHolder");
@@ -33,6 +35,7 @@ define(function (require, exports, module) {
 
 		this.codeMirror.on("changes", this.codeMirrorDidChange);
 		this.codeMirror.on("keydown", this._onEditorKeyEvent);
+		this.codeMirror.on("blur", this._onEditorBlur);
 		this.$container.on("keydown", this._onGeneralKeyEvent);
 
 		this.$container.find('.ti-header').on("click", this.toggleSourceCodeVisible);
@@ -69,8 +72,9 @@ define(function (require, exports, module) {
 		}
 	});
 
-	CodeWidget.prototype.codeMirror 	= undefined;
-	CodeWidget.prototype._$container 	= undefined;
+	CodeWidget.prototype.codeMirror 				= undefined;
+	CodeWidget.prototype._$container 				= undefined;
+	CodeWidget.prototype._focusedByCursorMovement 	= undefined;
 
 	CodeWidget.prototype.codeMirrorDidChange = function() {
 		DocumentManager.getCurrentDocument().isDirty = true;
@@ -141,22 +145,27 @@ define(function (require, exports, module) {
 				this.codeMirror.refresh();
 			}.bind(this), 1);
 		} else {
+			// if (this.codeMirror.)
 			this.$editorHolder.slideUp('fast');
 		}
 	};
 
 	CodeWidget.prototype.focus = function(direction) {
-		if (this.$editorHolder.is(":visible")) {
-			if (direction === "up") {
-				var lastLineIndex = this.codeMirror.lineCount() - 1;
-				this.codeMirror.setSelection({ line: lastLineIndex, ch: this.codeMirror.getLine(lastLineIndex).length });
-			} else {
-				this.codeMirror.setSelection({ line: 0, ch: 0 });
-			}
-			this.codeMirror.focus();
-		} else {
-			$(this).trigger("cursorShouldMoveToOtherWidget", direction);
+		if (! this.$editorHolder.is(":visible")) {
+			this.toggleSourceCodeVisible();
+			this._focusedByCursorMovement = true;
 		}
+		if (direction === "up") {
+			var lastLineIndex = this.codeMirror.lineCount() - 1;
+			this.codeMirror.setSelection({ line: lastLineIndex, ch: this.codeMirror.getLine(lastLineIndex).length });
+		} else {
+			this.codeMirror.setSelection({ line: 0, ch: 0 });
+		}
+		this.codeMirror.focus();
+	};
+
+	CodeWidget.prototype._onEditorBlur = function() {
+		this._focusedByCursorMovement = false;
 	};
 
 	CodeWidget.prototype._onEditorKeyEvent = function(theEditor, event) {
@@ -170,12 +179,18 @@ define(function (require, exports, module) {
         switch (event.keyCode) {
             case 38: //Arrow Up Key
                 if (cursorPos.line === 0) {
+                    if (this._focusedByCursorMovement) {
+                    	this.toggleSourceCodeVisible();
+                    }
                     $(this).trigger("cursorShouldMoveToOtherWidget", "up");
                 }
                 break;
             case 40:
                 if (cursorPos.line === this.codeMirror.lineCount() - 1) {
-                	$(this).trigger("cursorShouldMoveToOtherWidget", "down");
+                	if (this._focusedByCursorMovement) {
+                    	this.toggleSourceCodeVisible();
+                    }
+                    $(this).trigger("cursorShouldMoveToOtherWidget", "down");
                 }
                 break;
         }

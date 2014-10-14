@@ -288,9 +288,8 @@ define(function (require, exports, module) {
 		var emittingWidgetIndex = -1; 
 		var emittingSuiteName;
 		var emittingWidgetSuite = _.find(this.widgetsBySuite, function (widgetArray, suiteName) {
-			var tmp = widgetArray.indexOf(event.target);
-			if (tmp > -1) {
-				emittingWidgetIndex = tmp; 
+			emittingWidgetIndex = widgetArray.indexOf(event.target);
+			if (emittingWidgetIndex > -1) {
 				emittingSuiteName = suiteName;
 				return true;
 			} else {
