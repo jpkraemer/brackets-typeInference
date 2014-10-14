@@ -97,6 +97,14 @@ define(function (require, exports, module) {
 				this._updateStatusIndicator();
 				this._updateCalledFunctions();
 			}
+		},
+		"inSuite": {
+			get: function () { return this.$container.hasClass('ti-inSuite'); },
+			set: function (inSuite) {	
+				if (this.inSuite !== inSuite) {
+					this.$container.toggleClass('ti-inSuite');
+				}
+			}
 		}
 	});
 

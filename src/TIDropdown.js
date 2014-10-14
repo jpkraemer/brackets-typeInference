@@ -55,7 +55,8 @@ define(function (require, exports, module) {
 				if ((newSelectionIndex >= 0) && (newSelectionIndex < this.content.length)) {
 					this._selectionIndex = newSelectionIndex;
 				}	
-				this._updateTextContainer();			
+				this._updateTextContainer();
+				$(this).trigger("change", [ this.value ]);
 			}
 		},
 		"allowEdit": {
@@ -104,7 +105,6 @@ define(function (require, exports, module) {
 	TIDropdown.prototype._onUlClick = function(event) {
 		var $a = $(event.target); 
 		this.value = $a.data("value"); 
-		$(this).trigger("change", [ this.value ]);
 	};
 
 	TIDropdown.prototype._updatePopup = function () {
