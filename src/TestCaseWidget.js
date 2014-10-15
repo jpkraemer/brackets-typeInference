@@ -26,6 +26,7 @@ define(function (require, exports, module) {
 		this.$container.addClass('ti-testCase');
 		this.$container.find(".ti-headerLine").prepend($("<span />").addClass("ti-testStatusIndicator"));
 		this.$container.find(".ti-header").append($("<span />").addClass("ti-button ti-addButton"));
+		$("<div />").addClass("ti-testError").hide().appendTo(this.$container.find(".ti-header"));
 		this.$caption.attr('contenteditable', 'true'); 
 
 		//configure behavior
@@ -54,6 +55,10 @@ define(function (require, exports, module) {
 		"$calledFunctionsTableWrapper": {
 			get: function () { return this.$container.find(".ti-callsTableWrapper"); },
 			set: function () { throw new Error("Cannot set $statusIndicator"); }	
+		},
+		"$testErrorContainer": {
+			get: function () { return this.$container.find(".ti-testError"); },
+			set: function () { throw new Error("Cannot set $testErrorContainer"); }
 		},
 		"isSuggestion": {
 			get: function () { return this._isSuggestion; },
@@ -95,6 +100,7 @@ define(function (require, exports, module) {
 			set: function (newTestResult) {
 				this._testResult = newTestResult;
 				this._updateStatusIndicator();
+				this._updateError();
 				this._updateCalledFunctions();
 			}
 		},
@@ -107,6 +113,15 @@ define(function (require, exports, module) {
 			}
 		}
 	});
+
+ 	TestCaseWidget.prototype._updateError = function() {
+ 		if (this.testResult.success) {
+ 			this.$testErrorContainer.hide();
+ 		} else {
+ 			this.$testErrorContainer.html(this.testResult.failure.message);
+ 			this.$testErrorContainer.show();
+ 		}
+ 	};
 
  	TestCaseWidget.prototype._updateCalledFunctions = function() {
  		var $headerLine = this.$container.find(".ti-header > .ti-headerLine");
@@ -161,7 +176,7 @@ define(function (require, exports, module) {
 				if (! wasVisible) {
 					$calledFunctionsTableWrapper.hide();
 				}
-				$calledFunctionsTableWrapper.insertAfter(this.$container.find(".ti-header"));
+				$calledFunctionsTableWrapper.insertAfter(this.$testErrorContainer);
 			}
 		}.bind(this); 
 
