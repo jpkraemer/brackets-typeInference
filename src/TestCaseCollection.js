@@ -60,25 +60,30 @@ define(function (require, exports, module) {
 		}
 	});
 
-	TestCaseCollection.prototype.getTestSuiteTitles = function () {
-		return _.pluck(this.testSuites, "title");
+	TestCaseCollection.prototype.getTestSuiteTitlesById = function () {
+		return _.mapValues(this.testSuites, "title");
 	};
 
-	TestCaseCollection.prototype.getTestSuiteForTitle = function (title, createIfNecessary) {
-		if (createIfNecessary === undefined) {
-			createIfNecessary = false;
-		}
-
-		if ((createIfNecessary) && (this.testSuites[title] === undefined)) {
-			this.testSuites[title] = _.cloneDeep(this.testSuiteTemplate);
-			this.testSuites[title].title = title;
-		}
-
-		return this.testSuites[title];
+	TestCaseCollection.prototype.getTestSuiteForId = function (id) {
+		return this.testSuites[id];
 	};
 
-	TestCaseCollection.prototype.getTestCaseForSuiteTitleAndTestCaseId = function (title, testCaseId) {
-		var suite = this.getTestSuiteForTitle(title); 
+	TestCaseCollection.prototype.newTestSuiteWithTitle = function(title) {
+		var newSuiteId; 
+		do {
+			newSuiteId = Math.random().toString(36).substr(2,10); 
+		} while (_.keys(this.testSuites).indexOf(newSuiteId) > -1); 
+
+
+		this.testSuites[newSuiteId] = _.cloneDeep(this.testSuiteTemplate);
+		this.testSuites[newSuiteId].id = newSuiteId;
+		this.testSuites[newSuiteId].title = title;
+
+		return this.testSuites[newSuiteId];
+	};
+
+	TestCaseCollection.prototype.getTestCaseForSuiteIdAndTestCaseId = function (id, testCaseId) {
+		var suite = this.getTestSuiteForId(id); 
 		var result;
 
 		if (suite !== undefined) {
@@ -88,15 +93,15 @@ define(function (require, exports, module) {
 		return result;
 	};
 
-	TestCaseCollection.prototype.addTestCaseToSuite = function (testCase, title) {
-		if (this.getTestCaseForSuiteTitleAndTestCaseId(title, testCase.id) !== undefined) {
-			TIUtils.log("Test Case with id: " + testCase.id + "already exists for suite title: "+ title); 
+	TestCaseCollection.prototype.addTestCaseToSuite = function (testCase, id) {
+		if (this.getTestCaseForSuiteTitleAndTestCaseId(id, testCase.id) !== undefined) {
+			TIUtils.log("Test Case with id: " + testCase.id + "already exists for suite id: "+ id); 
 			return;
 		}
 
-		var testSuite = this.getTestSuiteForTitle(title, true);
+		var testSuite = this.getTestSuiteForId(id);
 
-		testCase.suiteName = title;
+		testCase.suiteId = id;
 		do {
 			testCase.id = Math.random().toString(36).substr(2,10); 
 		} while (_.find(testSuite.tests, { id: testCase.id }) !== undefined); 
@@ -106,14 +111,14 @@ define(function (require, exports, module) {
 		return testCase;
 	};
 
-	TestCaseCollection.prototype.updateTestCaseInSuite = function (newTestCases, title) {
+	TestCaseCollection.prototype.updateTestCaseInSuite = function (newTestCases, id) {
 		if (! Array.isArray(newTestCases)) {
 			newTestCases = [ newTestCases ];
 		}
 
 		for (var i = 0; i < newTestCases.length; i++) {
 			var newTestCase = newTestCases[i];
-			var testCase = this.getTestCaseForSuiteTitleAndTestCaseId(title, newTestCase.id);
+			var testCase = this.getTestCaseForSuiteIdAndTestCaseId(id, newTestCase.id);
 			if (testCase === undefined) {
 				throw new Error("Could not update test case, no test case exists for id " + newTestCase.id);
 			} else { 
@@ -123,7 +128,7 @@ define(function (require, exports, module) {
 	};
 
 	TestCaseCollection.prototype.updateTestSuite = function (testSuite) {
-		this._testSuites[testSuite.title] = testSuite; 
+		this._testSuites[testSuite.id] = testSuite; 
 	};
 
 	TestCaseCollection.prototype._parseTestFromFile = function () {
@@ -164,9 +169,13 @@ define(function (require, exports, module) {
 						(node.expression.type === "CallExpression") &&
 						(node.expression.callee.name === "describe")) {
 
-						var suiteName = node.expression.arguments[0].value;
-						testSuites[suiteName] = _.cloneDeep(this.testSuiteTemplate);
-						testSuites[suiteName].title = node.expression.arguments[0].value;
+						var suiteNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
+						var suiteId = suiteNameComponents[0];
+						var suiteName = suiteNameComponents.slice(1).join(SEPARATOR);
+
+						testSuites[suiteId] = _.cloneDeep(this.testSuiteTemplate);
+						testSuites[suiteId].id = suiteId;
+						testSuites[suiteId].title = suiteName;
 
 						var individualTestsAst = node.expression.arguments[1].body.body; 
 						var beforeAllNodes = [];
@@ -196,26 +205,26 @@ define(function (require, exports, module) {
 
 									var testCase = {
 										id: literalTestCaseNameComponents[0],
-										suiteName: suiteName,
+										suiteId: suiteId,
 										title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
 										code: extractCodeFromLocation(node, node.expression.arguments[1].loc),
 										sourceLocation: node.expression.arguments[1].loc
 									};
 
-									testSuites[suiteName].tests.push(testCase);
+									testSuites[suiteId].tests.push(testCase);
 								} else if (node.expression.callee.name === "beforeEach") {
 									foundFirstJasmineNode = true;
-									testSuites[suiteName].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+									testSuites[suiteId].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								} else if (node.expression.callee.name === "afterEach") {
 									foundFirstJasmineNode = true;
-									testSuites[suiteName].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+									testSuites[suiteId].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
 								}
 							} else if (! foundFirstJasmineNode) {
 								beforeAllNodes.push(node);
 							}
 						});
 
-						testSuites[suiteName].beforeAll.code = Escodegen.generate({
+						testSuites[suiteId].beforeAll.code = Escodegen.generate({
 							type: "Program",
 							body: beforeAllNodes
 						});
@@ -262,7 +271,7 @@ define(function (require, exports, module) {
                 arguments: [
                     {
                         type: "Literal",
-                        value: testSuite.title,
+                        value: testSuite.id + SEPARATOR + testSuite.title,
                     },
                     {
                         type: "FunctionExpression",

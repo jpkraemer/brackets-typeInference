@@ -147,7 +147,9 @@
 								resultTestCases.push(newTestResult);
 							}
 
-							result[testsuite.$.name] = resultTestCases;
+							var testSuiteNameComponents = testsuite.$.name.split(SEPARATOR); 
+							var testSuiteId = testSuiteNameComponents[0];
+							result[testSuiteId] = resultTestCases;
 						}
 					}
 				};

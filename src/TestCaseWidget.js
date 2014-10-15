@@ -182,8 +182,8 @@ define(function (require, exports, module) {
 
 	TestCaseWidget.prototype.didUpdateTestResults = function(event) {
 		var results = TestCaseCollectionManager.getLastTestResults();
-		if (results[this.testCase.suiteName]) {
-			var testResult = _.find(results[this.testCase.suiteName], { id: this.testCase.id });
+		if (results[this.testCase.suiteId]) {
+			var testResult = _.find(results[this.testCase.suiteId], { id: this.testCase.id });
 			if (testResult !== undefined) {
 				this.testResult = testResult;
 			}

@@ -27,23 +27,19 @@ define(function (require, exports, module) {
 
 	GeneratedTestCaseCollection.prototype = Object.create(TestCaseCollection.prototype); 
 	GeneratedTestCaseCollection.prototype.constructor = GeneratedTestCaseCollection; 
+	GeneratedTestCaseCollection.prototype.parentClass = TestCaseCollection.prototype;
 
-	GeneratedTestCaseCollection.prototype.getTestSuiteForTitle = function (title, createIfNecessary) {
-		if (createIfNecessary === undefined) {
-			createIfNecessary = false;
+	GeneratedTestCaseCollection.prototype.getTestSuiteForId = function(id) {
+		var result = this.parentClass.getTestSuiteForId.call(this, id);
+
+		if (result === undefined) {
+			var functionName = this._functionNameFromFunctionIdentifier(id);
+			result = this.newTestSuiteWithTitle("Tests for " + functionName);
+			result.beforeEach.code = "function () {\n    " + functionName + " = " + this._functionCodeVariableNameForFunctionName(functionName) + ";\n}";
+			result.beforeAll.code = "var " + functionName + ";";
 		}
 
-		if ((createIfNecessary) && (this.testSuites[title] === undefined)) {
-			var functionName = this._functionNameFromFunctionIdentifier(title);
-
-			var newSuite = _.cloneDeep(this.testSuiteTemplate);
-			newSuite.title = title; 
-			newSuite.beforeEach.code = "function () {\n    " + functionName + " = " + this._functionCodeVariableNameForFunctionName(functionName) + ";\n}";
-			newSuite.beforeAll.code = "var " + functionName + ";";
-			this.testSuites[title] = newSuite;
-		}
-
-		return this.testSuites[title];
+		return result;
 	};
 
 	GeneratedTestCaseCollection.prototype._functionNameFromFunctionIdentifier = function(functionIdentifier) {
@@ -60,11 +56,11 @@ define(function (require, exports, module) {
 
 		var resultPromise = new $.Deferred();
 
-		var path = testSuite.title.split("-").slice(0,-3).join("-");
+		var path = testSuite.id.split("-").slice(0,-3).join("-");
 		var file = FileSystem.getFileForPath(path);
 		DocumentManager.getDocumentText(file).done(function (code) {
 			
-			var functionRange = FunctionTracker.functionLocationForFunctionIdentifier(testSuite.title).functionRange;
+			var functionRange = FunctionTracker.functionLocationForFunctionIdentifier(testSuite.id).functionRange;
 			var codeLines = code.split("\n").slice(functionRange.start.line, functionRange.end.line + 1); 
 			
 			codeLines[0] = codeLines[0].substr(functionRange.start.ch); 
@@ -77,7 +73,7 @@ define(function (require, exports, module) {
 
 			codeLines[codeLines.length - 1] = codeLines[codeLines.length - 1].substr(0, functionRange.end.ch);
 			var functionCode = "var " + 
-				this._functionCodeVariableNameForFunctionName(this._functionNameFromFunctionIdentifier(testSuite.title)) + 
+				this._functionCodeVariableNameForFunctionName(this._functionNameFromFunctionIdentifier(testSuite.id)) + 
 				" = function " + 
 				argumentsString +
 				" " +
