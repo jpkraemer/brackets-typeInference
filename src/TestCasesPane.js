@@ -69,11 +69,13 @@ define(function (require, exports, module) {
 		var $selectorsContainer = this.$pane.find(".ti-testCasesPaneHeader .ti-centerHoriz");
 
 		this._collectionSelector = new TIDropdown(true, false);
+		this._collectionSelector.caption = "Suite Collection";
 		$(this._collectionSelector).on("change", this._onCollectionSelectorChange); 
 		$(this._collectionSelector).on("add", this._onCollectionSelectorAdd); 
 		this._collectionSelector.appendTo($selectorsContainer);
 		
 		this._suiteSelector = new TIDropdown(false, false);
+		this._suiteSelector.caption = "Test Suite";
 		$(this._suiteSelector).on("change", this._onSuiteSelectorChange); 
 		$(this._suiteSelector).on("add", this._onSuiteSelectorChange); 
 		this._suiteSelector.appendTo($selectorsContainer);

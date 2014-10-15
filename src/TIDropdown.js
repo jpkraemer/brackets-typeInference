@@ -10,6 +10,7 @@ define(function (require, exports, module) {
 		_.bindAll(this);
 
 		this.$container = $("<span />").addClass("ti-dropdown");
+		this.$caption = $("<p />").appendTo(this.$container);
 		this.$textContainer = $("<span />").appendTo(this.$container);
 		this.$popup = $("<div />").hide().appendTo(this.$container);
 
@@ -65,6 +66,10 @@ define(function (require, exports, module) {
 				this._allowEdit = allowEdit;
 				this.$textContainer.attr('contenteditable', allowEdit ? 'true' : 'false'); 
 			}
+		},
+		"caption": {
+			get: function () { return this.$caption.text(); },
+			set: function (newCaption) { this.$caption.text(newCaption); }
 		},
 		"_selection": {
 			get: function () { return this.content[this.selectionIndex] || { text: undefined, value: undefined }; },
