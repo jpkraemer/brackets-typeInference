@@ -120,6 +120,7 @@ define(function (require, exports, module) {
 		"testCaseCollection": {
 			get: function () { return this._testCaseCollection; },
 			set: function (newTestCaseCollection) { 
+				this.updateTestCases();
 				this._testCaseCollection = newTestCaseCollection; 
 				this._updateTestSuiteList();
 			}
@@ -233,7 +234,7 @@ define(function (require, exports, module) {
 		_.forEach(this.widgetsBySuite, function (widgetsForSuite, suiteId) {
 			var testSuite = {
 				id: 	suiteId,
-				title:  this._suiteSelector._selection.text,
+				title:  this.testSuite.title,
 				tests: 	_(widgetsForSuite).filter(function (widget) {
 							return ("testCase" in widget);
 						}).map(function(widget) {
@@ -421,7 +422,7 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype._update = function() {
-		this.updateTestCases();
+		// this.updateTestCases();
 		this._clear();
 		
 		if (this.testSuite === undefined) {
@@ -429,7 +430,7 @@ define(function (require, exports, module) {
 		}
 
 		var widgetsForCurrentSuite = [];
-		this.widgetsBySuite[this.testSuite.title] = widgetsForCurrentSuite;	
+		this.widgetsBySuite[this.testSuite.id] = widgetsForCurrentSuite;	
 
 		var isModeSuite = (this.mode === TestCasesPaneMode.suite);
 

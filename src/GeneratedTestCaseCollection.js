@@ -34,9 +34,14 @@ define(function (require, exports, module) {
 
 		if (result === undefined) {
 			var functionName = this._functionNameFromFunctionIdentifier(id);
-			result = this.newTestSuiteWithTitle("Tests for " + functionName);
+			
+			result = _.cloneDeep(this.testSuiteTemplate);
+			result.id = id;
+			result.title = "Tests for " + functionName;
 			result.beforeEach.code = "function () {\n    " + functionName + " = " + this._functionCodeVariableNameForFunctionName(functionName) + ";\n}";
 			result.beforeAll.code = "var " + functionName + ";";
+
+			this.testSuites[id] = result;
 		}
 
 		return result;

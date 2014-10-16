@@ -16,9 +16,11 @@ define(function (require, exports, module) {
 		var typeInformation = TypeInformationStore.typeInformationForFunctionIdentifier(functionIdentifier).done(function (docs) {
 			var getTemplateStringForBaseTemplate = function (template) {
 				var functionCall = functionName + "(";
-				functionCall += typeInformation.argumentTypes.map(function(el, index) {
-					return "__" + index + "__"; 
-				}).join(", ");
+				if (typeInformation.argumentTypes !== undefined) {
+					functionCall += typeInformation.argumentTypes.map(function(el, index) {
+						return "__" + index + "__"; 
+					}).join(", ");
+				}
 				functionCall += ")";
 				template = template.replace(/__name__/, functionCall); 
 				template = template.replace(/__returnValue__/, "undefined");
@@ -65,6 +67,11 @@ define(function (require, exports, module) {
 	 */
 	function _suggestArgumentValues (typeInformation) {
 		var result = []; 
+
+		if (typeInformation.argumentTypes === undefined) {
+			return result;
+		}
+
 		for (var i = 0; i < typeInformation.argumentTypes.length; i++) {
 			var argumentType = typeInformation.argumentTypes[i]; 
 			var argumentSuggestion = []; 
