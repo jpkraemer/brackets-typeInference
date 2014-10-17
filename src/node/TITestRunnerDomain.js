@@ -91,8 +91,8 @@
 														backtrace: backtrace
 													});
 												}
+												break;
 											}
-											break;
 										}
 									}
 								}
