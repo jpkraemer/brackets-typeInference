@@ -213,11 +213,12 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype._insertNewTestcase = function(testCase) {
 		var newWidget = new TestCaseWidget(this.testCaseCollection.addTestCaseToSuite(testCase, this.testSuiteId));
 		newWidget.inSuite = true;
+		$(newWidget).on("cursorShouldMoveToOtherWidget", this.cursorShouldMoveToOtherWidget);
 
 		var widgetsForSuite = this.widgetsBySuite[this.testSuiteId];
 		newWidget.insertBefore(this.$pane.find(".ti-roundAddButton"));
 
-		widgetsForSuite.push(newWidget);
+		widgetsForSuite.splice(-1, 0, newWidget);
 		
 		if (event !== undefined) {
 			event.stopPropagation();
