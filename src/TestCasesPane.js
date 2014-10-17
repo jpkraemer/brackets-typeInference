@@ -212,9 +212,10 @@ define(function (require, exports, module) {
 
 	TestCasesPane.prototype._insertNewTestcase = function(testCase) {
 		var newWidget = new TestCaseWidget(this.testCaseCollection.addTestCaseToSuite(testCase, this.testSuiteId));
+		newWidget.inSuite = true;
 
 		var widgetsForSuite = this.widgetsBySuite[this.testSuiteId];
-		newWidget.insertBefore(widgetsForSuite[widgetsForSuite.length - 1].$container);
+		newWidget.insertBefore(this.$pane.find(".ti-roundAddButton"));
 
 		widgetsForSuite.push(newWidget);
 		

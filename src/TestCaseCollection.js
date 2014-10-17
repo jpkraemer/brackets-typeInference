@@ -94,7 +94,7 @@ define(function (require, exports, module) {
 	};
 
 	TestCaseCollection.prototype.addTestCaseToSuite = function (testCase, id) {
-		if (this.getTestCaseForSuiteTitleAndTestCaseId(id, testCase.id) !== undefined) {
+		if (this.getTestCaseForSuiteIdAndTestCaseId(id, testCase.id) !== undefined) {
 			TIUtils.log("Test Case with id: " + testCase.id + "already exists for suite id: "+ id); 
 			return;
 		}

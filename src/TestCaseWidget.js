@@ -138,10 +138,18 @@ define(function (require, exports, module) {
 					$headerLine.append($wrapper);
 	 			}
 
-	 			var callCount = this.testResult.calledFunctions.length; 
-	 			var text = "Calling " + callCount + " function"; 
-	 			if (callCount > 1) {
+	 			var groupedCalledFunctions = _.groupBy(this.testResult.calledFunctions, function (element) {
+	 				return element.functionInfo.id;
+	 			});
+
+	 			var functionCount = _.keys(groupedCalledFunctions).length;
+	 			var callCount = this.testResult.calledFunctions.length;
+	 			var text = "Calling " + functionCount + " function"; 
+	 			if (functionCount > 1) {
 	 				text += "s";
+	 			}
+	 			if (callCount > functionCount) {
+	 				text += " (" + callCount + " calls)";
 	 			}
 	 			$calledFunctionsLink.text(text);
 	 		} else {
@@ -205,7 +213,7 @@ define(function (require, exports, module) {
 		}
 	};
 
-	TestCaseWidget.prototype._onShowCallClicked = function(calledFunction) {
+	TestCaseWidget.prototype._onShowCallClicked = function(calledFunction, event) {
 
 		var highlightRangeInCodeMirror = function(range, codeMirror) {
 			for (var i = range.start.line; i <= range.end.line; i++) {
@@ -282,6 +290,8 @@ define(function (require, exports, module) {
 
 		highlightCalledMethodInEditor();
 		highlightCallInTest(); 
+
+		event.stopPropagation();
 	};
 
 	TestCaseWidget.prototype.focus = function(direction) {
