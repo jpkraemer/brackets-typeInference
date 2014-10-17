@@ -512,7 +512,13 @@ define(function (require, exports, module) {
 				changes = generalizingMergePolicy(doc, typeInformation);
 			}
 
-			merge(doc, changes.propertiesToUpdate);
+			if (isMerge) {
+				merge(doc, changes.propertiesToUpdate);
+			} else {
+				_.forOwn(changes.propertiesToUpdate, function (element, key) {
+					doc[key] = element;
+				});
+			}
 			_.forOwn(changes.propertiesToRemove, function (shouldDelete, key) {
 				if (shouldDelete) {
 					delete doc[key];

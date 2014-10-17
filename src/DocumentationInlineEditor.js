@@ -376,7 +376,7 @@ define(function (require, exports, module) {
 					$jumpToCallButton.on("click", this._showCallLocationClickHandler.bind(this, theseusInvocationId));
 				}.bind(this));
 
-				var $openChangesButton = $("<a />").addClass('ti-button').text("Type mismatch"); 
+				var $openChangesButton = $("<a />").addClass('ti-button').text("Type changed"); 
 				$openChangesButton.addClass('ti-alert');
 				$openChangesButton.on("click", function (event) {
 					$pendingChangesTable.toggle();
