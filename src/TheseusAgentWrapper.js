@@ -13,6 +13,7 @@ define(function (require, exports, module) {
 	var _subscriptions = [];
 	var _tracedFunctions = [];
 	var _logHandles = [];
+	var _cachedResults = [];
 
 	function init () {
 		Agent 			= ExtensionLoader.getRequireContextForExtension("theseus")("./src/Agent");
@@ -41,11 +42,15 @@ define(function (require, exports, module) {
 			registrationId = Math.random().toString(36).substr(2,10);
 		} while (allRegistrationIds.indexOf(registrationId) !== -1); 
 
-		_subscriptions.push({
+		var subscription = {
 			filter: filter, 
 			callback: callback, 
 			registrationId: registrationId
-		}); 
+		};
+
+		_subscriptions.push(subscription); 
+
+		_notifySubscriptionAboutResults(subscription, _cachedResults);
 
 		return registrationId;
 	}
@@ -59,17 +64,23 @@ define(function (require, exports, module) {
 	}
 
 	function _scriptWentAway (event, path) {
-		
+		console.log("went away");
+		_cachedResults = [];
 	}
 
 	function _receivedScriptInfo (event, path) {
+		console.log("came in");
 		if (path !== "[built-in]") {
 			//each time a new file is indexed by the agent, we start tracking call logs for all functions in the file 
 			var functionsInFile = Agent.functionsInFile(path);
 
-			_tracedFunctions = _.uniq(_tracedFunctions.concat(functionsInFile), "id");
-			
+			_.remove(functionsInFile, function (functionInFile) {
+				return (_.find(_tracedFunctions, { id: functionInFile.id }) !== undefined);
+			});
+
 			if (functionsInFile.length !== 0) {
+				_tracedFunctions = _.uniq(_tracedFunctions.concat(functionsInFile), "id");
+				
 				Agent.trackLogs({
 					ids: _.pluck(functionsInFile, "id"),
 					eventNames: [],
@@ -124,6 +135,23 @@ define(function (require, exports, module) {
 
 		return result.promise();
 	}
+
+	function _notifySubscriptionAboutResults (subscription, results) {
+		var arrayFilter = function (result) {
+			return (this.indexOf(result.nodeId) > -1);
+		};
+		
+		var filter = subscription.filter; 
+
+		if (Array.isArray(filter)) {
+			filter = arrayFilter.bind(subscription.filter);
+		}
+
+		var resultsToPassOn = _.filter(results, filter);
+		if (resultsToPassOn.length > 0) {
+			subscription.callback(resultsToPassOn); 
+		}
+	}
 	
 	/**
 	 * This method is just called periodically to search for new Theseus results
@@ -135,21 +163,11 @@ define(function (require, exports, module) {
     				results = [results];
     			}
 
-				var arrayFilter = function (result) {
-					return (this.indexOf(result.nodeId) > -1);
-				};
+    			_cachedResults = _cachedResults.concat(results);
 
     			for (var i = 0; i < _subscriptions.length; i++) {
     				var subscription = _subscriptions[i];
-    				var filter = subscription.filter; 
-    				if (Array.isArray(filter)) {
-    					filter = arrayFilter.bind(subscription.filter);
-    				}
-
-    				var resultsToPassOn = _.filter(results, filter);
-    				if (resultsToPassOn.length > 0) {
-    					subscription.callback(resultsToPassOn); 
-    				}
+    				_notifySubscriptionAboutResults(subscription, results); 
     			}
     		}
     	};
