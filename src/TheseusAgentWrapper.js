@@ -66,6 +66,8 @@ define(function (require, exports, module) {
 	function _scriptWentAway (event, path) {
 		console.log("went away");
 		_cachedResults = [];
+		_tracedFunctions =[];
+		_logHandles = [];
 	}
 
 	function _receivedScriptInfo (event, path) {

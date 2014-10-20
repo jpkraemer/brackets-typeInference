@@ -87,7 +87,7 @@ define(function (require, exports, module) {
 			_.forOwn(functionLocations, function (functionLocation, functionIdentifier) {
 				var index = functionIdentifiers.indexOf(functionIdentifier);
 
-				if (index !== -1) {
+				if ((index !== -1) && (inlineWidgetsByFunctionIdentifier[functionIdentifier] === undefined)) {
 					inlineWidgetsByFunctionIdentifier[functionIdentifier] = new DocumentationInlineEditor(functionIdentifier, hostEditor, functionLocation.commentRange.start, functionLocation.commentRange.end);
 				}
 			});
