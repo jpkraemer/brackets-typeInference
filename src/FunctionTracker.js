@@ -87,25 +87,25 @@ define(function (require, exports, module) {
 		_onDocumentChanged();
 		
 		$(referencedEditor).on("cursorActivity" + EVENT_NAMESPACE, function () {
-			if (referencedEditor.hasSelection()) {
-				var selection = referencedEditor.getSelection(); 
-				_.each(trackedFunctions, function (functionInfo, functionIdentifier) {
-					if (_rangeContainsRange(selection, functionInfo.functionRange)) {
-						if (! _rangeContainsRange(selection, functionInfo.commentRange)) {
-							selection = _rangeContainingRanges(selection, functionInfo.commentRange);
-						}
-					}
-				});
+			// if (referencedEditor.hasSelection()) {
+			// 	var selection = referencedEditor.getSelection(); 
+			// 	_.each(trackedFunctions, function (functionInfo, functionIdentifier) {
+			// 		if (_rangeContainsRange(selection, functionInfo.functionRange)) {
+			// 			if (! _rangeContainsRange(selection, functionInfo.commentRange)) {
+			// 				selection = _rangeContainingRanges(selection, functionInfo.commentRange);
+			// 			}
+			// 		}
+			// 	});
 
-				//actually including the commment is not enough, needs one line before
-				if (selection.start.line === 0) {
-					selection.start.ch = 0;
-				} else {
-					selection.start.line = selection.start.line - 1; 
-					selection.start.ch = currentDocument.getLine(selection.start.line).length - 1;
-				}
-				referencedEditor.setSelection(selection.start, selection.end);
-			}
+			// 	//actually including the commment is not enough, needs one line before
+			// 	if (selection.start.line === 0) {
+			// 		selection.start.ch = 0;
+			// 	} else {
+			// 		selection.start.line = selection.start.line - 1; 
+			// 		selection.start.ch = currentDocument.getLine(selection.start.line).length - 1;
+			// 	}
+			// 	referencedEditor.setSelection(selection.start, selection.end);
+			// }
 		});	
 	}
 
