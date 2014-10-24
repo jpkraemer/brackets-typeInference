@@ -7,26 +7,53 @@ define(function (require, exports, module) {
 	var _ 				= require("./lib/lodash");
 	var ExtensionLoader = brackets.getModule("utils/ExtensionLoader");
 	
-	var Agent 			= ExtensionLoader.getRequireContextForExtension("theseus")("./src/Agent");
-	var AgentManager 	= ExtensionLoader.getRequireContextForExtension("theseus")("./src/AgentManager");
+	var Agent;// 			= ExtensionLoader.getRequireContextForExtension("theseus")("./src/Agent");
+	var AgentManager;// 	= ExtensionLoader.getRequireContextForExtension("theseus")("./src/AgentManager");
 
 	var _subscriptions = [];
 	var _tracedFunctions = [];
 	var _logHandles = [];
 	var _cachedResults = [];
 
-	function init () {
-		Agent 			= ExtensionLoader.getRequireContextForExtension("theseus")("./src/Agent");
-		AgentManager 	= ExtensionLoader.getRequireContextForExtension("theseus")("./src/AgentManager");
+	ExtensionLoader.getRequireContextForExtension("theseus")([ "./src/Agent", "./src/AgentManager" ], function (newAgent, newAgentManager) {
+		/**
+		 * This method is just called periodically to search for new Theseus results
+		 */
+		function _updateLoop () {
+			var newLogsHandler = function (results) {
+	    		if (results && results.length > 0) {
+	    			if (!Array.isArray(results)) {
+	    				results = [results];
+	    			}
 
-		Agent.init(); 
+	    			_cachedResults = _cachedResults.concat(results);
+
+	    			for (var i = 0; i < _subscriptions.length; i++) {
+	    				var subscription = _subscriptions[i];
+	    				_notifySubscriptionAboutResults(subscription, results); 
+	    			}
+	    		}
+	    	};
+
+	    	if (Agent.isReady()) {
+	    		for (var i = 0; i < _logHandles.length; i++) {
+	    			var logHandle = _logHandles[i];
+		    		Agent.refreshLogs(logHandle, 20, newLogsHandler);	
+		    	}
+	    	}
+	    }
+
+	    Agent = newAgent; 
+	    AgentManager = newAgentManager;
+
+	    Agent.init(); 
 		AgentManager.init();
 
 		$(Agent).on("receivedScriptInfo", _receivedScriptInfo);
         $(Agent).on("scriptWentAway", _scriptWentAway);
 
         setInterval(_updateLoop, 100);
-	}
+	});
 
 	/**
 	 * Register for Updates from theseus. Filter can be either compatible with lodash's _.filter function or be an array of 
@@ -154,35 +181,7 @@ define(function (require, exports, module) {
 			subscription.callback(resultsToPassOn); 
 		}
 	}
-	
-	/**
-	 * This method is just called periodically to search for new Theseus results
-	 */
-	function _updateLoop () {
-		var newLogsHandler = function (results) {
-    		if (results && results.length > 0) {
-    			if (!Array.isArray(results)) {
-    				results = [results];
-    			}
 
-    			_cachedResults = _cachedResults.concat(results);
-
-    			for (var i = 0; i < _subscriptions.length; i++) {
-    				var subscription = _subscriptions[i];
-    				_notifySubscriptionAboutResults(subscription, results); 
-    			}
-    		}
-    	};
-
-    	if (Agent.isReady()) {
-    		for (var i = 0; i < _logHandles.length; i++) {
-    			var logHandle = _logHandles[i];
-	    		Agent.refreshLogs(logHandle, 20, newLogsHandler);	
-	    	}
-    	}
-    }
-
-    exports.init = init; 
     exports.registerForTheseusUpdates = registerForTheseusUpdates;
     exports.unregisterForTheseusUpdates = unregisterForTheseusUpdates;
     exports.callingInvocationForFunctionInvocation = callingInvocationForFunctionInvocation; 

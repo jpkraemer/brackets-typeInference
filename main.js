@@ -41,7 +41,6 @@ define(function (require, exports, module) {
 			mergeAutomaticUpdatesConservatively: true
 		});
 
-		TheseusAgentWrapper.init();
 		TheseusTypeProvider.init();
 		JSDocTypeProvider.init();
 		FunctionTracker.init();
