@@ -5,7 +5,7 @@ define(function (require, exports, module) {
  	"use strict"; 
 
  	var _ 				= require("./lib/lodash");
- 	var Document 		= brackets.getModule("document/Document");
+ 	var Document 		= brackets.getModule("document/Document").Document;
  	var Esprima			= require("./node/node_modules/esprima/esprima");
 
  	var EVENT_NAMESPACE = "FunctionTracker";
@@ -253,7 +253,7 @@ define(function (require, exports, module) {
 
 				if (functionInfo._functionIdentifier === undefined) {
 					functionInfo._functionIdentifier = 
-						document.file.fullPath + 
+						this.document.file.fullPath + 
 						"-function-" + 
 						(functionInfo._name || "anonymous") + 
 						"-" + 
@@ -267,14 +267,16 @@ define(function (require, exports, module) {
 						start: this.document._masterEditor._codeMirror.setBookmark(functionInfo.functionRange.start),
 						end: this.document._masterEditor._codeMirror.setBookmark(functionInfo.functionRange.end)
 					};
-					functionInfo.commentBookmarks = {
-						start: this.document._masterEditor._codeMirror.setBookmark(functionInfo.commentRange.start),
-						end: this.document._masterEditor._codeMirror.setBookmark(functionInfo.commentRange.end)
-					};
+					if (functionInfo.commentRange !== undefined) {
+						functionInfo._commentBookmarks = {
+							start: this.document._masterEditor._codeMirror.setBookmark(functionInfo.commentRange.start),
+							end: this.document._masterEditor._codeMirror.setBookmark(functionInfo.commentRange.end)
+						};
+					}
 				}
 				
 				this._functionInformationArray.push(functionInfo);
-			});
+			}.bind(this));
 		}
 	};
 });

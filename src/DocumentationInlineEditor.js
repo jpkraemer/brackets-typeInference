@@ -80,8 +80,8 @@ define(function (require, exports, module) {
 	 * @constructor
 	 * @param {String} functionIdentifier The permanent identifier for the function whose documentation is rendered
 	 * @param {Editor} hostEditor 
-	 * @param {{line: number, ch: number}} startBookmark start of the function in the source code
-	 * @param {{line: number, ch: number}} endBookmark end of the function in the source code
+	 * @param {{line: number, ch: number}} startBookmark start of the comment in the source code. 
+	 * @param {{line: number, ch: number}} endBookmark end of the comment in the source code
 	 */
 	function DocumentationInlineEditor (functionIdentifier, hostEditor, startPos, endPos) {
 		this.functionIdentifier        = functionIdentifier;
@@ -101,19 +101,12 @@ define(function (require, exports, module) {
 		this.$htmlContent.empty();
 		this.$htmlContent.off();
 
-		TypeInformationStore.typeInformationForFunctionIdentifier(this.functionIdentifier).done(function (docs) {
-			if (docs.length === 0) {
-				return;
-			} else {
-				this.load(hostEditor);
-				this.updateTypeInformation(docs[0]);
+		var typeInformation = hostEditor.document.typeInformationCollection.typeInformationForFunctionIdentifier(this.functionIdentifier); 
+		this.load(hostEditor);
+		this.updateTypeInformation(typeInformation);
 
-				hostEditor.addInlineWidgetAbove({ line: endPos.line + 1, ch: 0 }, this, true);
-				hostEditor._hideLines(startPos.line, endPos.line + 1);
-
-				$(TypeInformationStore).on("didUpdateTypeInformation", this._didUpdateTypeInformation);
-			}
-		}.bind(this));
+		hostEditor.addInlineWidgetAbove({ line: endPos.line + 1, ch: 0 }, this, true);
+		hostEditor._hideLines(startPos.line, endPos.line + 1);
 	}
 
 	DocumentationInlineEditor.prototype = Object.create(InlineWidget.prototype);
@@ -239,15 +232,18 @@ define(function (require, exports, module) {
 			i++;			
 		} while (matches);
 
-		end = { line: i - 2 };
-		line = this.hostEditor.document.getLine(end.line);
-		matches = line.match(/^\s*\*\//);
-		if (matches && (end.ch === undefined)) {
-			end.ch = matches.index + matches[0].length;
-			this._endBookmark.clear(); 
-			this._endBookmark = this.hostEditor._codeMirror.setBookmark(end);
+		// end = { line: i - 2 };
+		if (end.line < (i - 2)) {
+			end = { line: i };
+			line = this.hostEditor.document.getLine(end.line);
+			matches = line.match(/^\s*\*\//);
+			if (matches) {
+				end.ch = matches.index + matches[0].length;
+				this._endBookmark.clear(); 
+				this._endBookmark = this.hostEditor._codeMirror.setBookmark(end);
+			}
 		}
-
+		
 		if (end.ch === undefined) {
 			// We were unable to resync the end bookmark.
 			return null;
@@ -577,17 +573,8 @@ define(function (require, exports, module) {
 			this.inlineEditor.off("update", this._onEditorUpdate);
 
 			var jsdocString = this.inlineEditor.getValue();
-			var typeInformationUpdate = TypeInformationJSDocRenderer.updateTypeInformationWithJSDoc(_.cloneDeep(this.typeInformation), jsdocString);
-			//Only update the info we need. The other information might be wrong, e.g. description will always be empty when editing 
-			//something else but description
-			var $wrapper = $(this.inlineEditor.getWrapperElement()).parent(); 
-			if ($wrapper.hasClass('ti-description')) {
-				this.typeInformation.description = typeInformationUpdate.description;
-			}
-			this.typeInformation.argumentTypes = typeInformationUpdate.argumentTypes;
-			this.typeInformation.returnType = typeInformationUpdate.returnType; 
 
-			TypeInformationStore.userUpdatedTypeInformation(this, [ this.typeInformation ], false);
+			this.typeInformation.updateWithJSDoc(jsdocString, this.inlineEditor.displayedDocPartSpecifier);
 
 			this.inlineEditor = null;
 		}
@@ -612,7 +599,6 @@ define(function (require, exports, module) {
 
 		var $target;
 		var jsDoc;
-		var type;
 		var needsTopMargin = false; 
 
 		switch (this.docPartSpecifier.partType) {
@@ -622,8 +608,7 @@ define(function (require, exports, module) {
 				needsTopMargin = $target.is(":empty");
 				break; 
 			case "parameters": 
-				type = this.typeInformation.argumentTypes[this.docPartSpecifier.id]; 
-				jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDoc(type, true);
+				jsDoc = this.typeInformation.argumentTypes[this.docPartSpecifier.id].toJSDoc();
 
 				var self = this; 
 				$target = this.$contentDiv.find(".ti-property").filter(function (index) {
@@ -632,8 +617,7 @@ define(function (require, exports, module) {
 				}); 
 				break;
 			case "return": 
-				type = this.typeInformation.returnType; 
-				jsDoc = TypeInformationJSDocRenderer.typeSpecToJSDoc(type, false);
+				jsDoc = this.typeInformation.returnType.toJSDoc(true);
 
 				$target = this.$contentDiv.find(".ti-property").filter(function (index) {
 					return $(this).data("argumentId") === undefined;
@@ -656,6 +640,8 @@ define(function (require, exports, module) {
 		this.inlineEditor.on("keydown", this._onEditorKeyEvent);
 		this.inlineEditor.on("blur", this._onEditorBlur);
 		this.inlineEditor.on("update", this._onEditorUpdate);
+
+		this.inlineEditor.displayedDocPartSpecifier = this.docPartSpecifier; 
 
 		this.inlineEditor.focus();
 		this.inlineEditor.setCursor(0, jsDoc.length - 1);

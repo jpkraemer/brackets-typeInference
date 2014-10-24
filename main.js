@@ -20,6 +20,8 @@ define(function (require, exports, module) {
 	var TheseusAgentWrapper 		= require("./src/TheseusAgentWrapper");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
 	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
+	var TypeInformationCollection 	= require("./src/TypeInformationCollection");
+	var FunctionTracker2 			= require("./src/FunctionTracker2");
 	var TIUtils 					= require("./src/TIUtils");
 
 	var EVENT_NAMESPACE = ".type-inference-main";
@@ -82,15 +84,16 @@ define(function (require, exports, module) {
 		hostEditor = EditorManager.getCurrentFullEditor();
 		hostEditor._codeMirror.on("keydown", _onEditorKeyEvent);
 
-		TypeInformationStore.functionIdentifiersForFile(currentDocument.file.fullPath).done(function (functionIdentifiers) {
-			var functionLocations = FunctionTracker.functionLocationsInCurrentDocument(); 
-			_.forOwn(functionLocations, function (functionLocation, functionIdentifier) {
-				var index = functionIdentifiers.indexOf(functionIdentifier);
-
-				if ((index !== -1) && (inlineWidgetsByFunctionIdentifier[functionIdentifier] === undefined)) {
-					inlineWidgetsByFunctionIdentifier[functionIdentifier] = new DocumentationInlineEditor(functionIdentifier, hostEditor, functionLocation.commentRange.start, functionLocation.commentRange.end);
+		var functionInfos = currentDocument.functionTracker.getAllFunctions();
+		_.forOwn(functionInfos, function (functionInfo) {
+			if (inlineWidgetsByFunctionIdentifier[functionInfo.functionIdentifier] === undefined) {
+				if (functionInfo.commentRange !== undefined) {
+					inlineWidgetsByFunctionIdentifier[functionInfo.functionIdentifier] = new DocumentationInlineEditor(functionInfo.functionIdentifier, hostEditor, functionInfo.commentRange.start, functionInfo.commentRange.end);
+				} else {
+					var firstFunctionLine = functionInfo.functionRange.start.line;
+					inlineWidgetsByFunctionIdentifier[functionInfo.functionIdentifier] = new DocumentationInlineEditor(functionInfo.functionIdentifier, hostEditor, { line: firstFunctionLine - 1, ch: 0 }, { line: firstFunctionLine - 1, ch: 0 });
 				}
-			});
+			}
 		});
 	}
 
@@ -98,7 +101,7 @@ define(function (require, exports, module) {
 		if ((inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] === undefined) && 
 			(newDoc.file === currentDocument.file.fullPath)) {
 
-			var functionLocation = FunctionTracker.functionLocationForFunctionIdentifier(newDoc.functionIdentifier);
+			var functionLocation = currentDocument.functionTracker.getFunctionInformationForIdentifier(newDoc.functionIdentifier);
 			if (functionLocation !== undefined) {
 				inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] = new DocumentationInlineEditor(newDoc.functionIdentifier, hostEditor, functionLocation.commentRange.start, functionLocation.commentRange.end);
 			}

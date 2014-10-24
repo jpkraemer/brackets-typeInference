@@ -86,7 +86,7 @@ define(function (require, exports, module) {
 	function _jsdocTypeToTypeSpec(jsdocType) { 
 		var result = {}; 
 		//sanity check
-		if ((jsdocType === null) || (jsdocType.type === null)) {
+		if ((! jsdocType) || (jsdocType.type === null)) {
 			return result; 
 		}
 

@@ -25,9 +25,9 @@ define(function (require, exports, module) {
 	var referencedDocument;
 
 	function init () {
-		$(DocumentManager).on("currentDocumentChange", _currentDocumentChanged); 
+		// $(DocumentManager).on("currentDocumentChange", _currentDocumentChanged); 
 
-		_currentDocumentChanged(null, DocumentManager.getCurrentDocument(), null);
+		// _currentDocumentChanged(null, DocumentManager.getCurrentDocument(), null);
 	}
 
 	/**

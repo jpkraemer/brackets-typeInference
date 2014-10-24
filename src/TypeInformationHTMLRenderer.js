@@ -18,7 +18,7 @@ define(function (require, exports, module) {
 		var templateValues = {
 			isArgument: isArgument,
 			name: type.name,
-			type: typeSpecToHTML(type)
+			type: typeSpecToHTML(type.type)
 		};
 
 		if (type.description !== undefined) {

@@ -122,31 +122,31 @@
 	function updateDocumentWithTypeInformation (document, typeInformation) { 
 		$(FunctionTracker).off(EVENT_NAMESPACE);
 
-		var functionInfo = FunctionTracker.functionLocationForFunctionIdentifier(typeInformation.functionIdentifier);
-		var documentWasDirty = document.isDirty; 
+		// var functionInfo = FunctionTracker.functionLocationForFunctionIdentifier(typeInformation.functionIdentifier);
+		// var documentWasDirty = document.isDirty; 
 			
-		if ((functionInfo !== undefined) && 
-			(functionInfo.commentRange !== undefined)) {
-			//&&
-			// (document.file.fullPath === typeInformation.path))
+		// if ((functionInfo !== undefined) && 
+		// 	(functionInfo.commentRange !== undefined)) {
+		// 	//&&
+		// 	// (document.file.fullPath === typeInformation.path))
 
-			var jsDocString = TypeInformationJSDocRenderer.typeInformationToJSDoc(typeInformation); 
-			var commentInset = _commentInsetForDocumentAndFunctionInfo(document, functionInfo);
+		// 	var jsDocString = TypeInformationJSDocRenderer.typeInformationToJSDoc(typeInformation); 
+		// 	var commentInset = _commentInsetForDocumentAndFunctionInfo(document, functionInfo);
 
-			var commentLines = jsDocString.split("\n");
-			commentLines = _.map(commentLines, function (line) {
-				return commentInset + " * " + line;
-			});
+		// 	var commentLines = jsDocString.split("\n");
+		// 	commentLines = _.map(commentLines, function (line) {
+		// 		return commentInset + " * " + line;
+		// 	});
 
-			var newComment = commentInset + "/**\n" + commentLines.join("\n") + "\n" + commentInset + " */";
-			document.replaceRange(newComment, functionInfo.commentRange.start, functionInfo.commentRange.end);
+		// 	var newComment = commentInset + "/**\n" + commentLines.join("\n") + "\n" + commentInset + " */";
+		// 	document.replaceRange(newComment, functionInfo.commentRange.start, functionInfo.commentRange.end);
 			
-			if (! documentWasDirty) {
-				CommandManager.execute(Commands.FILE_SAVE, document);
-			}
-		} else {
-			TIUtils.log("Something went wrong, called update with typeInformation for other document or untracked function.");
-		}
+		// 	if (! documentWasDirty) {
+		// 		CommandManager.execute(Commands.FILE_SAVE, document);
+		// 	}
+		// } else {
+		// 	TIUtils.log("Something went wrong, called update with typeInformation for other document or untracked function.");
+		// }
 
 		$(FunctionTracker).on("didUpdateTrackedFunctions" + EVENT_NAMESPACE, _didUpdateTrackedFunctions);
 	}

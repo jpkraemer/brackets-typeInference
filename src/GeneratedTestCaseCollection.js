@@ -62,10 +62,11 @@ define(function (require, exports, module) {
 		var resultPromise = new $.Deferred();
 
 		var path = testSuite.id.split("-").slice(0,-3).join("-");
-		var file = FileSystem.getFileForPath(path);
-		DocumentManager.getDocumentText(file).done(function (code) {
+		DocumentManager.getDocumentForPath(path).done(function (document) {
+
+			var code = document.getText();
 			
-			var functionRange = FunctionTracker.functionLocationForFunctionIdentifier(testSuite.id).functionRange;
+			var functionRange = document.functionTracker.getFunctionInformationForIdentifier(testSuite.id).functionRange;
 			var codeLines = code.split("\n").slice(functionRange.start.line, functionRange.end.line + 1); 
 			
 			codeLines[0] = codeLines[0].substr(functionRange.start.ch); 

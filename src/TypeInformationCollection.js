@@ -4,78 +4,13 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 					= require("./lib/lodash");
-	var Document 			= brackets.getModule("document/Document");
-
-	/**
-	 * @class TypeInformation This class represents type information for a single argument 
-	 */	
-	function TypeInformation () {
-		_.bindAll(this);
-
-		this.name = ""; 
-		this.description = "";
-	}
-
-	TypeInformation.prototype.constructor = TypeInformation; 
-
-	TypeInformation.prototype.name = undefined; 
-	TypeInformation.prototype.description = undefined; 
-	TypeInformation.prototype.type = undefined; 
-
-	/**
-	 * Type constants for TypeSpec.type
-	 */
-	var TypeSpecType = {
-		stringType: 	"string",
-		numberType: 	"number",
-		booleanType: 	"boolean",
-		functionType: 	"function",
-		arrayType: 		"array",
-		objectType: 	"object",
-		anyType: 		"any",
-		multipleType: 	"multiple"
-	};
-
-	/**
-	 * @class TypeSpec This class represents a type spec for a single type
-	 */	
-	function TypeSpec () {
-		_.bindAll(this);
-	}
-
-	TypeSpec.prototype.constructor = TypeSpec;
-
-	TypeSpec.prototype.type = undefined;
-	TypeSpec.prototype.spec = undefined;
-	TypeSpec.prototype.count = undefined;
-
-	/**
-	 * @class FunctionTypeInformation This class represents type information for a complete method
-	 */
-	function FunctionTypeInformation (functionIdentifier) {
-		_.bindAll(this);
-
-		this._functionIdentifier = functionIdentifier; 
-		this.description = "";
-	}
-
-	FunctionTypeInformation.prototype.constructor = FunctionTypeInformation;
-
-	FunctionTypeInformation.prototype._functionIdentifier = undefined;
-
-	FunctionTypeInformation.prototype.argumentTypes = undefined; 
-	FunctionTypeInformation.prototype.returnType = undefined; 
-	FunctionTypeInformation.prototype.description = undefined;
-
-	FunctionTypeInformation.prototype.lastArguments = undefined;
-
-	Object.defineProperties(FunctionTypeInformation.prototype, {
-		"functionIdentifier": {
-			get: function () { return this._functionIdentifier; },
-			set: function () { throw new Error("Should not change function identifier."); }
-		}
-	});
+	var _ 							= require("./lib/lodash");
+	var Document 					= brackets.getModule("document/Document").Document;
+	var DocumentManager 			= brackets.getModule("document/DocumentManager");
+	var DocumentCommandHandlers 	= brackets.getModule("document/DocumentCommandHandlers");
+	var FileUtils					= brackets.getModule("file/FileUtils");
+	var FunctionTypeInformation 	= require("./FunctionTypeInformation");
+	var TIUtils						= require("./TIUtils");
 
 	/**
 	 * Add a typeInformationCollection to every JS document
@@ -94,6 +29,20 @@ define(function (require, exports, module) {
 	});
 
 	/**
+	 * Change document saving to write type information to document first
+	 */
+	var oldWriteText = FileUtils.writeText; 
+	FileUtils.writeText = function (file, text, force) { 
+		var documents = DocumentManager.getAllOpenDocuments(); 
+		var document = _.find(documents, { file: file });
+		if (document.language.getMode() === "javascript") {
+			document.typeInformationCollection.save();
+			text = document.getText(true);
+		}
+		return oldWriteText.apply(null, [file, text, force]);
+	};
+
+	/**
 	 * @class TypeInformationCollection A collection of type information specific to one document.
 	 */	
 	function TypeInformationCollection (document) {
@@ -102,7 +51,7 @@ define(function (require, exports, module) {
 		this._document = document;
 		this._functionTypeInformationArray = []; 
 
-		this._loadingPromise = new $.Deferred();
+		this.load();
 	}
 
 	TypeInformationCollection.prototype.constructor = TypeInformationCollection; 
@@ -122,12 +71,62 @@ define(function (require, exports, module) {
 		}
 	});
 
+	TypeInformationCollection.prototype.typeInformationForFunctionIdentifier = function(functionIdentifier) {
+		return _.find(this._functionTypeInformationArray, { functionIdentifier: functionIdentifier });
+	};
+
 	TypeInformationCollection.prototype.load = function () {
-		//todo
+		this._functionTypeInformationArray = [];
+
+		var allFunctions = this.document.functionTracker.getAllFunctions(); 
+		for (var i = 0; i < allFunctions.length; i++) {
+			var functionInformation = allFunctions[i];
+			var functionTypeInformation; 
+			if (functionInformation.commentRange !== undefined) {
+				var commentText = this.document.getRange(functionInformation.commentRange.start, functionInformation.commentRange.end);
+				commentText = commentText.replace(/^\s*(?:\*\/?|\/\*\*)/mg, "");
+				functionTypeInformation = new FunctionTypeInformation(functionInformation.functionIdentifier, commentText);
+			} else {
+				functionTypeInformation = new FunctionTypeInformation(functionInformation.functionIdentifier);
+			}
+			this._functionTypeInformationArray.push(functionTypeInformation);
+		}
 	};
 
 	TypeInformationCollection.prototype.save = function () { 
-		//todo
-	};
+		var _commentInsetForDocumentAndFunctionInfo = function (functionInfo) {
+			var commentInset;
+			if (functionInfo.commentRange !== undefined) {
+				commentInset = this.document.getRange({ line: functionInfo.commentRange.start.line, ch: 0 }, functionInfo.commentRange.start);
+			} else {
+				commentInset = this.document.getRange({ line: functionInfo.functionRange.start.line, ch: 0 }, functionInfo.functionRange.start);
+			}
 
+			return commentInset;
+		}.bind(this);
+
+		var prependInsetAndStars = function (commentInset, line) {
+			return commentInset + " * " + line;
+		};
+
+		for (var i = 0; i < this._functionTypeInformationArray.length; i++) {
+			var typeInformation = this._functionTypeInformationArray[i];
+			var functionInfo = this.document.functionTracker.getFunctionInformationForIdentifier(typeInformation.functionIdentifier);
+		
+			var jsDocString = typeInformation.toJSDoc(); 
+			var commentInset = _commentInsetForDocumentAndFunctionInfo(functionInfo);
+
+			var commentLines = jsDocString.split("\n");
+			commentLines = _.map(commentLines, prependInsetAndStars.bind(null, commentInset));
+
+			var newComment = commentInset + "/**\n" + commentLines.join("\n") + "\n" + commentInset + " */";
+
+			if (functionInfo.commentRange !== undefined) {
+				this.document.replaceRange(newComment, functionInfo.commentRange.start, functionInfo.commentRange.end);
+			} else {
+				newComment += "\n";
+				this.document.replaceRange(newComment, functionInfo.functionRange.start);
+			}
+		}
+	};
 });
