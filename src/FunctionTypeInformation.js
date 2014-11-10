@@ -4,9 +4,10 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 			= require("./lib/lodash");
-	var doctrine 	= require("./lib/doctrine");
-	var TIUtils		= require("./TIUtils");
+	var _ 						= require("./lib/lodash");
+	var doctrine 				= require("./lib/doctrine");
+	var TIUtils					= require("./TIUtils");
+	var TheseusTypeProvider 	= require("./TheseusTypeProvider");
 
 	/**
 	 * @class TypeInformation This class represents type information for a single argument 
@@ -16,6 +17,7 @@ define(function (require, exports, module) {
 
 		this.name = ""; 
 		this.description = "";
+		this.conflicts = [];
 
 		if (jsdocTag) {
 			this.name = jsdocTag.name === null ? undefined : jsdocTag.name; 
@@ -29,6 +31,21 @@ define(function (require, exports, module) {
 	TypeInformation.prototype.name = undefined; 
 	TypeInformation.prototype.description = undefined; 
 	TypeInformation.prototype.type = undefined; 
+	TypeInformation.prototype.conflicts = undefined;
+
+	/**
+	 * Type constants for TypeSpec.type
+	 */
+	var TypeSpecType = {
+		stringType: 	"string",
+		numberType: 	"number",
+		booleanType: 	"boolean",
+		functionType: 	"function",
+		arrayType: 		"array",
+		objectType: 	"object",
+		anyType: 		"any",
+		multipleType: 	"multiple"
+	};
 
 	TypeInformation.prototype.toJSDoc = function (asReturnType) {
 		var templateValues = {
@@ -47,18 +64,18 @@ define(function (require, exports, module) {
 		return Mustache.render(template, templateValues);
 	};
 
-	/**
-	 * Type constants for TypeSpec.type
-	 */
-	var TypeSpecType = {
-		stringType: 	"string",
-		numberType: 	"number",
-		booleanType: 	"boolean",
-		functionType: 	"function",
-		arrayType: 		"array",
-		objectType: 	"object",
-		anyType: 		"any",
-		multipleType: 	"multiple"
+	TypeInformation.prototype.mergedConflicts = function() {
+		if (this.conflicts.length === 0) {
+			return undefined;
+		}
+
+		var result = this.conflicts[0];
+
+		for (var i = 1; i < this.conflicts.length; i++) {
+			result.type = result.type.typeByMergingWithType(this.conflicts[i].type);
+		}
+
+		return result;
 	};
 
 	/**
@@ -128,6 +145,28 @@ define(function (require, exports, module) {
 	TypeSpec.prototype.spec = undefined;
 	TypeSpec.prototype.count = undefined;
 
+	TypeSpec.prototype.copy = function() {
+		var result = new TypeSpec();
+
+		result.type = this.type;
+		result.count = _.cloneDeep(this.count);
+		switch(result.type) {
+			case "array": 
+			case "multiple":
+				result.spec = _.map(this.spec, function (element) {
+					return element.copy();
+				});
+				break;
+
+			case "object":
+				result.spec = _.mapValues(this.spec, function (element) {
+					return element.copy();
+				});
+		}
+
+		return result;
+	};
+
 	TypeSpec.prototype.toJSDoc = function() {
 		var result = ""; 
 
@@ -163,6 +202,135 @@ define(function (require, exports, module) {
 		return result;
 	};
 
+	TypeSpec.prototype.matchesTypeSpec = function(typeSpec, checkCount) {
+		if (checkCount === undefined) {
+			checkCount = false;
+		}
+
+		var result = false; 
+
+		if (this.type === typeSpec.type) {
+			
+			switch (this.type) {
+				case "array": 
+				case "multiple":
+					if (this.spec.length === typeSpec.spec.length) {
+						result = _.every(this.type.spec, function (element, index) {
+							element.matchesTypeSpec(typeSpec.spec[index]);
+						});
+					} else {
+						result = false;
+					}
+					break;
+				case "object": 
+					var xor = _.xor(_.keys(this.spec), _.keys(typeSpec.spec));
+					if (xor.length === 0) {
+						//keys are the same
+						result = _.every(this.type.spec, function (element, index) {
+							element.matchesTypeSpec(typeSpec.spec[index]);
+						});
+					} else {
+						result = false;
+					}
+					break;
+				default:
+					result = true;
+			}
+
+			if (checkCount) {
+				//handle case that this.count is a range
+				result = (this.count === typeSpec.count);
+			}
+		} else {
+			//handle case this.type === multiple
+			result = false;
+		}
+
+		return result;
+	};
+
+	TypeSpec.prototype.typeByMergingWithType = function(typeSpec) {
+		var result = this.copy();
+		
+		if (result.type !== typeSpec.type) {
+			var tmp = new TypeSpec(); 
+			tmp.type = "multiple"; 
+			tmp.spec = [ result, new TypeSpec(typeSpec.toJSDoc()) ];
+			result = tmp; 
+		} else {
+			//merge spec
+			var resultSpec; 
+			switch (result.type) {
+				case "array":
+					var shorterType = result.spec.length < typeSpec.spec.length ? result : typeSpec; 
+					var longerType = result.spec.length < typeSpec.spec.length ? typeSpec : result;
+					var specPart; 
+					resultSpec = [];
+
+					for (var i = 0; i < shorterType.spec.length; i++) {
+						specPart = shorterType.spec[i]; 
+						var otherSpecPart = longerType.spec[i];
+						resultSpec.push(specPart.typeByMergingWithType(otherSpecPart));
+					}
+
+					for (; i< longerType.spec.length; i++) {
+						resultSpec.push(longerType.spec[i]);
+					}
+
+					result.spec = resultSpec; 
+					break;
+				case "object": 
+					resultSpec = {}; 
+					var keys = _.union(_.keys(result.spec), _.keys(typeSpec.spec));
+
+					_.each(keys, function (key) {
+						var lhs = result.spec[key]; 
+						var rhs = typeSpec.spec[key]; 
+						if ((lhs !== undefined) && (rhs !== undefined)) {
+							resultSpec[key] = lhs.typeByMergingWithType(rhs);
+						} else if (lhs !== undefined) {
+							resultSpec[key] = lhs;
+						} else if (rhs !== undefined) {
+							resultSpec[key] = rhs;
+						}
+					});
+
+					result.spec = resultSpec;
+					break;
+				case "multiple":
+					result.spec.concat(typeSpec.spec);
+					break;
+			}
+
+			if (this.count !== undefined) {
+				result.count = this.count; 
+			} 
+
+			if (typeSpec.count !== undefined) {
+				if (result.count !== undefined) {
+					if (result.count !== typeSpec.count) {
+						//convert both to range format
+						var otherCount = typeSpec.count;
+						if (typeof result.count === "number") {
+							result.count = { min: result.count, max: result.count };
+						} 
+						if (typeof typeSpec.count === "number") {
+							otherCount = { min: otherCount, max: otherCount };
+						}
+
+						result.count.min = Math.min(result.count.min, otherCount.min);
+						result.count.max = Math.max(result.count.max, otherCount.max);
+					}
+				} else {
+					result.count = typeSpec.count;
+				}
+				
+			}
+		}
+
+		return result; 
+	};
+
 	/**
 	 * @class FunctionTypeInformation This class represents type information for a complete method
 	 */
@@ -171,6 +339,7 @@ define(function (require, exports, module) {
 
 		this._functionIdentifier = functionIdentifier; 
 		this.description = "";
+		this.argumentTypes = [];
 
 		if (jsdocString !== undefined) {
 			var propertiesFromJSDoc = this._parseJSDocString(jsdocString);
@@ -178,6 +347,8 @@ define(function (require, exports, module) {
 				this[key] = value;
 			}.bind(this));
 		}
+
+		$(TheseusTypeProvider).on("didReceiveTypeInformation", this._theseusDidReceiveTypeInformation);
 	}
 
 	FunctionTypeInformation.prototype.constructor = FunctionTypeInformation;
@@ -196,6 +367,40 @@ define(function (require, exports, module) {
 			set: function () { throw new Error("Should not change function identifier."); }
 		}
 	});
+
+	FunctionTypeInformation.prototype._theseusDidReceiveTypeInformation = function(event, typeProvider, results) {
+		var resultsForFunction = _.filter(results, { functionIdentifier: this.functionIdentifier });
+		for (var i = 0; i < resultsForFunction.length; i++) {
+			var result = resultsForFunction[i]; 
+
+			for (var j = 0; j < this.argumentTypes.length; j++) {
+				var argumentType = this.argumentTypes[j];
+				var argumentTypeUpdate = result.argumentTypes[j];
+				if (argumentType.name !== argumentTypeUpdate.name) {
+					argumentType.name = argumentTypeUpdate.name;
+				}
+
+				if (!argumentType.type.matchesTypeSpec(argumentTypeUpdate.type)) {
+					argumentType.conflicts.push(argumentTypeUpdate);
+				} else {
+					this.argumentTypes[j].type = argumentType.type.typeByMergingWithType(argumentTypeUpdate);
+				}
+			}
+
+			this.argumentTypes.concat(result.argumentTypes.slice(j));
+
+			if (this.returnType === undefined) {
+				this.returnType = new TypeInformation();
+				this.returnType.type = result.returnType;
+			} else if (! this.returnType.type.matchesTypeSpec(result.returnType)) {
+				this.returnType.conflicts.push(result.returnType);
+			} else {
+				this.returnType.type = this.returnType.type.typeByMergingWithType(result.returnType);
+			}
+		}
+
+		$(this).trigger("change");
+	};
 
 	FunctionTypeInformation.prototype.updateWithJSDoc = function(jsdocString, editedPartTypeSpecifier) {
 		var propertiesFromJSDoc = this._parseJSDocString(jsdocString);
@@ -282,5 +487,7 @@ define(function (require, exports, module) {
 		return Mustache.render(template, templateValues);
 	};
 
-	module.exports = FunctionTypeInformation;
+	exports.FunctionTypeInformation = FunctionTypeInformation;
+	exports.TypeInformation 		= TypeInformation; 
+	exports.TypeSpec 				= TypeSpec;
 });

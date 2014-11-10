@@ -9,7 +9,7 @@ define(function (require, exports, module) {
 	var DocumentManager 			= brackets.getModule("document/DocumentManager");
 	var DocumentCommandHandlers 	= brackets.getModule("document/DocumentCommandHandlers");
 	var FileUtils					= brackets.getModule("file/FileUtils");
-	var FunctionTypeInformation 	= require("./FunctionTypeInformation");
+	var FunctionTypeInformation 	= require("./FunctionTypeInformation").FunctionTypeInformation;
 	var TIUtils						= require("./TIUtils");
 
 	/**

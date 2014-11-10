@@ -96,7 +96,7 @@ define(function (require, exports, module) {
 				result = type.type.charAt(0).toUpperCase() + type.type.slice(1);
 		}
 
-		if (type.hasOwnProperty("count")) {
+		if ((type.hasOwnProperty("count")) && (type.count !== undefined)) {
 			result += "<em>("; 
 			if (typeof type.count === "number"){
 				result += type.count;

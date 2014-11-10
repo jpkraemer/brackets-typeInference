@@ -89,21 +89,14 @@ define(function (require, exports, module) {
 		this._endBookmark 		       = hostEditor._codeMirror.setBookmark(endPos);
 		this._bookmarksForInvocationId = {};
 
-		this._onEditorBlur              = this._onEditorBlur.bind(this);
-		this._onEditorUpdate            = this._onEditorUpdate.bind(this);
-		this._onEditorKeyEvent          = this._onEditorKeyEvent.bind(this);
-		this._didUpdateTypeInformation  = this._didUpdateTypeInformation.bind(this);
-		this._clickHandler              = this._clickHandler.bind(this);
-		this._recalculateHeight         = this._recalculateHeight.bind(this);
-
 		InlineWidget.call(this);
+		_.bindAll(this);
 
 		this.$htmlContent.empty();
 		this.$htmlContent.off();
 
-		var typeInformation = hostEditor.document.typeInformationCollection.typeInformationForFunctionIdentifier(this.functionIdentifier); 
 		this.load(hostEditor);
-		this.updateTypeInformation(typeInformation);
+		this.typeInformation = hostEditor.document.typeInformationCollection.typeInformationForFunctionIdentifier(this.functionIdentifier);
 
 		hostEditor.addInlineWidgetAbove({ line: endPos.line + 1, ch: 0 }, this, true);
 		hostEditor._hideLines(startPos.line, endPos.line + 1);
@@ -142,7 +135,7 @@ define(function (require, exports, module) {
 	 * The currently displayed type information
 	 * @type {TypeInformation}
 	 */
-	DocumentationInlineEditor.prototype.typeInformation = null;
+	DocumentationInlineEditor.prototype._typeInformation = null;
 
 	/**
 	 * The current editor displayed to show part of the documentation. This iVar must not be called editor, because the QuickView
@@ -162,6 +155,21 @@ define(function (require, exports, module) {
 	 * @type {invocationId: {start: bookmark, end: bookmark}}
 	 */
 	DocumentationInlineEditor.prototype._bookmarksForInvocationId = undefined;
+
+	Object.defineProperties(DocumentationInlineEditor.prototype, {
+		"typeInformation": {
+			get: function () { return this._typeInformation; },
+			set: function (newValue) { 
+				if (this._typeInformation !== newValue) {
+					$(this._typeInformation).off("change"); 
+					this._typeInformation = newValue;
+					$(this._typeInformation).on("change", this._typeInformationDidChange);
+
+					this._render();
+				}
+			}
+		}
+	});
 
 	/**
 	 * This method clears all bookmarks and then empties the dictionary storing call locations
@@ -281,39 +289,8 @@ define(function (require, exports, module) {
 	 * @param  {jQueryEvent} evt
 	 * @param  {TypeInformation} newDoc
 	 */
-	DocumentationInlineEditor.prototype._didUpdateTypeInformation = function(evt, newDoc, pendingChanges) {
-		if (newDoc.functionIdentifier === this.functionIdentifier) {
-			this.updateTypeInformation(newDoc, pendingChanges);
-		}
-	};
-
-	/**
-	 * Update display with new type information that came in externally
-	 * @param  {TypeInformation} typeInformation
-	 */
-	DocumentationInlineEditor.prototype.updateTypeInformation = function (typeInformation, pendingChanges) {
-		if (this.functionIdentifier !== typeInformation.functionIdentifier) {
-			TIUtils.log("Inline widget for functionIdentifier "  + 
-				this.functionIdentifier + 
-				" updated with information for function identifier " + 
-				typeInformation.functionIdentifier + 
-				". Aborting update!");
-		}
-
-		var needsRerender = false; 
-		if (! _.isEqual(this.typeInformation, typeInformation)) { 
-			this.typeInformation = typeInformation;
-			needsRerender = true; 
-		}
-
-		if (pendingChanges !== undefined) {
-			this.pendingChanges = pendingChanges; 
-			needsRerender = true; 
-		}
-
-		if (needsRerender) {
-			this._render();
-		}
+	DocumentationInlineEditor.prototype._typeInformationDidChange = function(evt) {
+		this._render();
 	};
 
 	/**

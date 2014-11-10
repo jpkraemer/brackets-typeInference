@@ -9,8 +9,10 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 					= require("./lib/lodash");
-	var TheseusAgentWrapper = require("./TheseusAgentWrapper");
+	var _ 						= require("./lib/lodash");
+	var TheseusAgentWrapper 	= require("./TheseusAgentWrapper");
+	var TypeInformation 		= require("./FunctionTypeInformation").TypeInformation;
+	var TypeSpec 				= require("./FunctionTypeInformation").TypeSpec;
 
 	function init () {
 		TheseusAgentWrapper.registerForTheseusUpdates(function (result) {
@@ -23,6 +25,32 @@ define(function (require, exports, module) {
 		results = _.sortBy(results, "invocationId");
 		var resultsToPassOn = [];
 
+		var thesusTypeToTypeSpec  = function (theseusType) {
+			var result = new TypeSpec();
+			result.type = theseusType.type; 
+			result.count = theseusType.count;
+			switch(result.type) {
+				case "array": 
+					result.spec = _.map(theseusType.spec, function (elem) {
+						return thesusTypeToTypeSpec(elem);
+					});
+					break;
+				case "object":
+					result.spec = _.mapValues(theseusType.spec, function (elem) {
+						return thesusTypeToTypeSpec(elem);
+					});
+			}
+
+			return result;
+		};
+
+		var mappingFunction = function(element, index) {
+			var result = new TypeInformation();
+			result.name = argumentNames[index];
+			result.type = thesusTypeToTypeSpec(element.type);
+			return result;
+		};
+
 		for (var i = 0; i < results.length; i++) {
 			var result = results[i]; 
 
@@ -32,14 +60,11 @@ define(function (require, exports, module) {
 			};
 
 			var argumentNames = _.pluck(result.arguments, "name");
-			resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").value();
-			for (var j = 0; j < resultToPassOn.argumentTypes.length; j++) {
-				resultToPassOn.argumentTypes[j].name = argumentNames[j];
-			}
+			resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").map(mappingFunction).value();
 
 			resultToPassOn.lastArguments = result.arguments; 
 			if (result.returnValue !== undefined) {
-				resultToPassOn.returnType = result.returnValue.typeSpec; 
+				resultToPassOn.returnType = thesusTypeToTypeSpec(result.returnValue.typeSpec); 
 			}
 
 			resultsToPassOn.push(resultToPassOn); 
