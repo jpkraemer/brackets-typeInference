@@ -17,7 +17,7 @@ define(function (require, exports, module) {
 
 		this.name = ""; 
 		this.description = "";
-		this.conflicts = [];
+		this.conflicts = {};
 
 		if (jsdocTag) {
 			this.name = jsdocTag.name === null ? undefined : jsdocTag.name; 
@@ -65,14 +65,16 @@ define(function (require, exports, module) {
 	};
 
 	TypeInformation.prototype.mergedConflicts = function() {
-		if (this.conflicts.length === 0) {
+		var keys = _.keys(this.conflicts);
+		if (keys.length === 0) {
 			return undefined;
 		}
 
-		var result = this.conflicts[0];
+		var result = this.conflicts[keys[0]];
 
-		for (var i = 1; i < this.conflicts.length; i++) {
-			result.type = result.type.typeByMergingWithType(this.conflicts[i].type);
+		for (var i = 1; i < keys.length; i++) {
+			var currentConflict = this.conflicts[keys[i]];
+			result.type = result.type.typeByMergingWithType(currentConflict.type);
 		}
 
 		return result;
@@ -237,13 +239,27 @@ define(function (require, exports, module) {
 					result = true;
 			}
 
-			if (checkCount) {
-				//handle case that this.count is a range
-				result = (this.count === typeSpec.count);
+			if (result && checkCount) {
+				var countA = this.count; 
+				var countB = typeSpec.count; 
+				if ((countA !== undefined) && (countB !== undefined)) {
+					if (typeof countA !== "object") {
+						countA = { min: countA, max: countA };
+					} 
+					if (typeof countB !== "object") {
+						countB = { min: countB, max: countB };
+					}
+					result = ((countA.min >= countB.min) && (countA.max <= countB.max));
+				}
 			}
 		} else {
-			//handle case this.type === multiple
-			result = false;
+			if (typeSpec.type === "multiple") {
+				result = _.some(typeSpec.spec, function (element) {
+					return this.matchesTypeSpec(element);
+				});
+			} else {
+				result = false;
+			}
 		}
 
 		return result;
@@ -381,9 +397,9 @@ define(function (require, exports, module) {
 				}
 
 				if (!argumentType.type.matchesTypeSpec(argumentTypeUpdate.type)) {
-					argumentType.conflicts.push(argumentTypeUpdate);
+					argumentType.conflicts[result.theseusInvocationId] = argumentTypeUpdate;
 				} else {
-					this.argumentTypes[j].type = argumentType.type.typeByMergingWithType(argumentTypeUpdate);
+					this.argumentTypes[j].type = argumentType.type.typeByMergingWithType(argumentTypeUpdate.type);
 				}
 			}
 
@@ -393,7 +409,7 @@ define(function (require, exports, module) {
 				this.returnType = new TypeInformation();
 				this.returnType.type = result.returnType;
 			} else if (! this.returnType.type.matchesTypeSpec(result.returnType)) {
-				this.returnType.conflicts.push(result.returnType);
+				this.returnType.conflicts[result.theseusInvocationId] = result.returnType;
 			} else {
 				this.returnType.type = this.returnType.type.typeByMergingWithType(result.returnType);
 			}

@@ -47,7 +47,7 @@ define(function (require, exports, module) {
 		var mappingFunction = function(element, index) {
 			var result = new TypeInformation();
 			result.name = argumentNames[index];
-			result.type = thesusTypeToTypeSpec(element.type);
+			result.type = thesusTypeToTypeSpec(element);
 			return result;
 		};
 

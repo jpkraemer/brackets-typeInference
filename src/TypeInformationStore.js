@@ -139,8 +139,12 @@ define(function (require, exports, module) {
 
 		functionIdentifiersForFile(fullPath).done(function (docs) {
 			var functionIdentifier = _.find(docs, function (aFunctionIdentifier) {
-				var components = aFunctionIdentifier.split("-"); 
-				return (components[components.length - 2] === functionName); 
+				if (aFunctionIdentifier) {
+					var components = aFunctionIdentifier.split("-"); 
+					return (components[components.length - 2] === functionName); 
+				} else {
+					return false;
+				}
 			}); 
 
 			if (functionIdentifier === undefined) {

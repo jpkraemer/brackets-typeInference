@@ -28,24 +28,20 @@ define(function (require, exports, module) {
 		return Mustache.render(singleArgumentTemplate, templateValues); 
 	}
 
-	function pendingChangesToHTML (pendingChanges, isArgument) {
+	function pendingChangesToHTML (pendingChanges, mergedChange, isArgument) {
 		var pendingChangesTemplate = require("text!./templates/changesTable.html");
 		var templateValues = {
 			isArgument: isArgument, 
-			name: pendingChanges.merge.name,
-			type: typeSpecToHTML(pendingChanges.merge)
+			name: mergedChange.name,
+			type: typeSpecToHTML(mergedChange.type)
 		};
 
-		if (pendingChanges.merge.description !== undefined) {
-			templateValues.description = marked(pendingChanges.merge.description);
-		}
-
-		templateValues.individualChanges = _.map(_.omit(pendingChanges, "merge"), function (pendingChange, theseusInvocationId) {
+		templateValues.individualChanges = _.map(pendingChanges, function (pendingChange, theseusInvocationId) {
 			var result = {
 				isArgument: isArgument, 
 				name: pendingChange.name,
 				theseusInvocationId: theseusInvocationId,
-				type: typeSpecToHTML(pendingChange)
+				type: typeSpecToHTML(pendingChange.type)
 			};
 
 			if (pendingChange.description !== undefined) { 

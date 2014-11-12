@@ -322,14 +322,13 @@ define(function (require, exports, module) {
 		var $line;
 		var pendingChanges; 
 
-		var insertPendingChange = function (pendingChanges, $line, argumentTypeId) {
+		var insertPendingChange = function (typeInformation, $line, argumentTypeId) {
 			if (argumentTypeId === undefined) {
 				argumentTypeId = -1;
 			}
 
-			pendingChanges = _.cloneDeep(pendingChanges);
-			if ((pendingChanges !== undefined) && (! _.isEmpty(pendingChanges))) {
-				var $pendingChangesTable = $(TypeInformationHTMLRenderer.pendingChangesToHTML(pendingChanges, true));
+			if ((typeInformation.conflicts !== undefined) && (! _.isEmpty(typeInformation.conflicts))) {
+				var $pendingChangesTable = $(TypeInformationHTMLRenderer.pendingChangesToHTML(typeInformation.conflicts, typeInformation.mergedConflicts(), true));
 				$pendingChangesTable.hide();
 
 				var $mergeButton = $pendingChangesTable.find("tr:eq(1) a");
@@ -358,7 +357,6 @@ define(function (require, exports, module) {
 						var maxWidth = _.max($cells.map(function() {
 							return $(this).outerWidth(); 
 						}).get());
-						// $cells.outerWidth(maxWidth);
 
 						this._recalculateHeight();
 					}.bind(this), 1);
@@ -386,19 +384,11 @@ define(function (require, exports, module) {
 		if (this.typeInformation.argumentTypes && (this.typeInformation.argumentTypes.length > 0)) {
 			this.$contentDiv.append($("<h2 />").append("Parameters").addClass("ti-headline"));
 
-			var omitFunction = function (i, pendingChange) {
-				return (pendingChange.argumentTypes && pendingChange.argumentTypes[i]) === undefined; 
-			};
-
-			var mapValuesFunction = function (i, pendingChange) {
-				return pendingChange.argumentTypes[i]; 
-			};
-
 			for (var i = 0; i < this.typeInformation.argumentTypes.length; i++) {
-				$line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.argumentTypes[i], true));                 
-				if (this.pendingChanges !== undefined) {
-					pendingChanges = _(this.pendingChanges).omit(omitFunction.bind(this, i)).mapValues(mapValuesFunction.bind(this, i)).value();
-					insertPendingChange(pendingChanges, $line, i);
+				var typeInformation = this.typeInformation.argumentTypes[i]; 
+				$line = $(TypeInformationHTMLRenderer.typeToHTML(typeInformation, true));
+				if (_.size(typeInformation.conflicts) > 0) {
+					insertPendingChange(typeInformation, $line, i);
 				}
 				$line.data("argumentId", i);
 				$line.on("click", this._clickHandler);
@@ -409,11 +399,8 @@ define(function (require, exports, module) {
 		if (this.typeInformation.returnType) {
 			$line = $(TypeInformationHTMLRenderer.typeToHTML(this.typeInformation.returnType, false));
 			$line.addClass('ti-return');
-			if (this.pendingChanges !== undefined) {
-				pendingChanges = _(this.pendingChanges).omit(function (pendingChange) {
-					return (pendingChange.returnType === undefined); 
-				}).mapValues("returnType").value();
-				insertPendingChange(pendingChanges, $line, undefined);
+			if (_.size(this.typeInformation.returnType.conflicts) > 0) {
+				insertPendingChange(this.typeInformation.returnType, $line, undefined);
 			}
 
 			$line.on("click", this._clickHandler);
