@@ -80,6 +80,13 @@ define(function (require, exports, module) {
 		return result;
 	};
 
+	TypeInformation.prototype.resolveWithConflict = function (conflict) {
+		this.type = conflict.type; 
+		this.conflicts = _.reject(this.conflicts, function (element) {
+			return element.type.matchesTypeSpec(this.type);
+		}.bind(this));
+	};
+
 	/**
 	 * @class TypeSpec This class represents a type spec for a single type
 	 */	

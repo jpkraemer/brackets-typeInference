@@ -440,42 +440,23 @@ define(function (require, exports, module) {
 	 * @param  {object} event             The event
 	 */
 	DocumentationInlineEditor.prototype._markCorrectClickHandler = function(argumentTypeId, pendingChangesKey, event) {
+		var type;
 		if (argumentTypeId > -1) {
 			//we have an argument change
-			this.typeInformation.argumentTypes[argumentTypeId] = this.pendingChanges[pendingChangesKey].argumentTypes[argumentTypeId];
+			type = this.typeInformation.argumentTypes[argumentTypeId];
 		} else {
-			this.typeInformation.returnType = this.pendingChanges[pendingChangesKey].returnType; 
+			type = this.typeInformation.returnType;
 		}
 
-		TypeInformationStore.userUpdatedTypeInformation(this, [ this.typeInformation ], false);
+		if (pendingChangesKey === "merge") {
+			type.resolveWithConflict(type.mergedConflicts());
+		} else {
+			type.resolveWithConflict(type.conflicts[pendingChangesKey]);
+		}
 
-		//we need to check if the other pending changes now actually conform to the type info. 
-		//let's just submit the pending changes as new type information, if they merge flawlessly, we're good, 
-		//otherwise we will just get them back later. 
-		var typeInformationFromPendingChanges = _.map(_.omit(this.pendingChanges, "merge"), function (pendingChange) {
-			var result = _.cloneDeep(this.typeInformation);
-
-			if (pendingChange.argumentTypes !== undefined) {
-				for (var i = 0; i < pendingChange.argumentTypes.length; i++) {
-					if (pendingChange.argumentTypes[i] !== undefined) {
-						result.argumentTypes[i] = pendingChange.argumentTypes[i]; 
-					}
-				}
-			}
-
-			if (pendingChange.returnType !== undefined) {
-				result.returnType = pendingChange.returnType;
-			}
-
-			return result;
-		}.bind(this));
-
-		TypeInformationStore.userUpdatedTypeInformation(this, typeInformationFromPendingChanges, true, true);
+		this._render();
 
 		event.stopPropagation();
-
-		this.pendingChanges = undefined;        
-		this._render();
    };
 
    /**
