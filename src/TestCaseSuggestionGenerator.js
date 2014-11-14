@@ -4,35 +4,31 @@
 define(function (require, exports, module) {
 	"use strict"; 
 
-	var _ 						= require("./lib/lodash");
-	var TestCaseCollection 		= require("./TestCaseCollection");
-	var TypeInformationStore	= require("./TypeInformationStore");
+	var _ 							= require("./lib/lodash");
+	var TestCaseCollection 			= require("./TestCaseCollection");
+	var TypeInformationCollection 	= require("./TypeInformationCollection");
 
-	var returnValueTestTemplate = require("text!./templates/returnValueTest.txt");
-	var exceptionTestTemplate 	= require("text!./templates/exceptionTest.txt");
+	var returnValueTestTemplate 	= require("text!./templates/returnValueTest.txt");
+	var exceptionTestTemplate 		= require("text!./templates/exceptionTest.txt");
 
 	function getTestSuggestionsForFunctionIdentifier (functionIdentifier) {
-		var resultPromise = $.Deferred();
-		var typeInformation = TypeInformationStore.typeInformationForFunctionIdentifier(functionIdentifier).done(function (docs) {
-			var getTemplateStringForBaseTemplate = function (template) {
-				var functionCall = functionName + "(";
-				if (typeInformation.argumentTypes !== undefined) {
-					functionCall += typeInformation.argumentTypes.map(function(el, index) {
-						return "__" + index + "__"; 
-					}).join(", ");
-				}
-				functionCall += ")";
-				template = template.replace(/__name__/, functionCall); 
-				template = template.replace(/__returnValue__/, "undefined");
-				return template;
-			};
-
-			if (docs.length === 0) {
-				resultPromise.reject("No type information found");
+		var getTemplateStringForBaseTemplate = function (template) {
+			var functionCall = functionName + "(";
+			if (typeInformation.argumentTypes !== undefined) {
+				functionCall += typeInformation.argumentTypes.map(function(el, index) {
+					return "__" + index + "__"; 
+				}).join(", ");
 			}
+			functionCall += ")";
+			template = template.replace(/__name__/, functionCall); 
+			template = template.replace(/__returnValue__/, "undefined");
+			return template;
+		};
 
-			var typeInformation = docs[0];
-
+		var resultPromise = $.Deferred();
+		var typeInformation = TypeInformationCollection.typeInformationForFunctionIdentifier(functionIdentifier);
+		
+		if (typeInformation) {
 			var functionIdentifierSegments = typeInformation.functionIdentifier.split("-");
 			var functionIndex = functionIdentifierSegments.lastIndexOf("function");
 			var functionName = functionIdentifierSegments.slice(functionIndex + 1, -1).join("-");
@@ -54,7 +50,9 @@ define(function (require, exports, module) {
 			});
 
 			resultPromise.resolve(result);
-		}); 
+		} else {
+			resultPromise.reject("No type information found");
+		}
 
 		return resultPromise.promise();		
 	}

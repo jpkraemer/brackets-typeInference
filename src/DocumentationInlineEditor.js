@@ -10,12 +10,9 @@ define(function (require, exports, module) {
 	var CodeMirror                     = brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 	var Editor                         = brackets.getModule("editor/Editor").Editor;
 	var InlineWidget 			       = brackets.getModule("editor/InlineWidget").InlineWidget;
-	var JSDocTypeProvider              = require("./JSDocTypeProvider");
 	var TheseusAgentWrapper            = require("./TheseusAgentWrapper");
 	var TheseusTypeProvider            = require("./TheseusTypeProvider");
 	var TypeInformationHTMLRenderer    = require("./TypeInformationHTMLRenderer");
-	var TypeInformationJSDocRenderer   = require("./TypeInformationJSDocRenderer");
-	var TypeInformationStore           = require("./TypeInformationStore");
 	var TIUtils                        = require("./TIUtils");
 
 	var DOC_PART_ORDER                 = ["description", "parameters", "return"];

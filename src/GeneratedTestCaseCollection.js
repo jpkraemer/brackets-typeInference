@@ -13,7 +13,6 @@ define(function (require, exports, module) {
 	var File 					= brackets.getModule("filesystem/File");
 	var FileSystem				= brackets.getModule("filesystem/FileSystem");
 	var FileUtils				= brackets.getModule("file/FileUtils");
-	var FunctionTracker			= require("./FunctionTracker");
 	var TestCaseCollection 		= require("./TestCaseCollection");
 	var TIUtils					= require("./TIUtils");
 

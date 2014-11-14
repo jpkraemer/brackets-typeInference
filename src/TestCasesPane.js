@@ -10,7 +10,6 @@ define(function (require, exports, module) {
 	var CodeMirror 					= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror");
 	var DocumentManager 			= brackets.getModule("document/DocumentManager"); 
 	var EditorManager				= brackets.getModule("editor/EditorManager");
-	var FunctionTracker				= require("./FunctionTracker");
 	var PreviousExecutionsWidget	= require("./PreviousExecutionsWidget");
 	var ProjectManager				= brackets.getModule("project/ProjectManager");
 	var TemplateWidget				= require("./TemplateWidget");
@@ -268,7 +267,11 @@ define(function (require, exports, module) {
 
 	TestCasesPane.prototype.cursorMoved = function(event) {
 		var pos = this.currentFullEditor.getCursorPos();
-		var newFunctionIdentifier = FunctionTracker.functionIdAtLocationInDocument(pos, this.currentFullEditor.document);
+		var functionInfo = this.currentFullEditor.document.functionTracker.functionInfoAtLocationInDocument(pos); 
+		var newFunctionIdentifier;
+		if (functionInfo) {
+			newFunctionIdentifier = functionInfo.functionIdentifier;
+		}
 		if (this.functionIdentifier !== newFunctionIdentifier) {
 			this.functionIdentifier = newFunctionIdentifier;
 			if (this.isAutomaticSuiteSelectionEnabled) {
