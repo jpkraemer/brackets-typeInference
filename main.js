@@ -112,8 +112,7 @@ define(function (require, exports, module) {
             case 38: 
                 //Arrow Key Up
      			inlineWidget = _.find(inlineWidgetsByFunctionIdentifier, function (inlineWidget) {
-     				var range = inlineWidget.getCurrentRange(); 
-     				return (range.end.line === cursorPos.line - 1);
+     				return (inlineWidget.info.cm.lineInfo(inlineWidget.info.line).line === cursorPos.line);
      			});
      			fromBelow = true;
                 break;

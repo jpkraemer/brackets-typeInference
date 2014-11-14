@@ -182,26 +182,29 @@ define(function (require, exports, module) {
 
 	FunctionTracker.prototype.reload = function () {
 		var parseAst = function (node, filter, callback) {
-			if (node.body !== undefined) {
-				_(node.body).where(filter).each(callback);
-				var nextNodes = []; 
-				var i; 
-				var propertiesToCheckFor = ["body", "consequent", "alternate"]; 
+			var nextNodes = []; 
+			var i; 
+			var propertiesToCheckFor = ["body", "consequent", "alternate"]; 
 
-				for (i = 0; i < propertiesToCheckFor.length; i++) {
-					var property = propertiesToCheckFor[i]; 
-					if (node[property] !== undefined) {
-						if (Array.isArray(node[property])) {
-							nextNodes.concat(node[property]);
-						} else {
-							nextNodes.push(node[property]);
-						}
+			for (i = 0; i < propertiesToCheckFor.length; i++) {
+				var property = propertiesToCheckFor[i]; 
+				if (node[property]) {
+					if (Array.isArray(node[property])) {
+						nextNodes = nextNodes.concat(node[property]);
+					} else {
+						nextNodes.push(node[property]);
 					}
 				}
-				
-				for (i = 0; i < node.body.length; i++) {
-					parseAst(node.body[i], filter, callback);
-				}
+			}
+
+			_.forEach(nextNodes, function (child) {
+				child.parent = node;
+			});
+
+			_(nextNodes).where(filter).each(callback);
+			
+			for (i = 0; i < nextNodes.length; i++) {
+				parseAst(nextNodes[i], filter, callback);
 			}
 		};
 
@@ -250,15 +253,32 @@ define(function (require, exports, module) {
 
 				if (node.id !== undefined) {
 					functionInfo._name = node.id.name;
+				} else {
+					functionInfo._name = "anonymous";
 				}
 
 				if (functionInfo._functionIdentifier === undefined) {
-					functionInfo._functionIdentifier = 
-						this.document.file.fullPath + 
-						"-function-" + 
-						(functionInfo._name || "anonymous") + 
-						"-" + 
-						Math.random().toString(36).substr(2,5);
+					var nameAndParents = functionInfo._name;
+					var parentNode = node.parent;
+					while (parentNode) {
+						var parentName;
+						if (parentNode.id !== undefined) {
+							parentName = parentNode.id.name;
+						} else if (parentNode.type === "Program") {
+							parentName = parentNode.type;
+						} else {
+							parentName = "anonymous" + parentNode.type;
+						}
+						nameAndParents = parentName + "." + nameAndParents;
+						parentNode = parentNode.parent;
+					}
+					functionInfo._functionIdentifier = this.document.file.fullPath + "-function-" + nameAndParents;
+
+					//usually there should be no duplicates, i.e. two methods named equally in the same scope
+					var duplicateNumber = 1;
+					while (_.some(this._functionInformationArray, { functionIdentifier: functionInfo._functionIdentifier })) {
+						functionInfo._functionIdentifier += duplicateNumber;
+					}
 				}
 
 				functionInfo._functionRange = esprimaLocationToRange(node.loc);
