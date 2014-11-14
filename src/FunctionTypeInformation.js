@@ -441,7 +441,7 @@ define(function (require, exports, module) {
 					this.argumentTypes[editedPartTypeSpecifier.id] = propertiesFromJSDoc.argumentTypes[newArgumentTypeIndex];
 					propertiesFromJSDoc.argumentTypes.splice(newArgumentTypeIndex, 1);
 				}
-				Array.splice.bind(null, editedPartTypeSpecifier.id, 0).apply(this.argumentTypes, propertiesFromJSDoc.argumentTypes);
+				Array.prototype.splice.bind(this.argumentTypes, editedPartTypeSpecifier.id, 0).apply(this.argumentTypes, propertiesFromJSDoc.argumentTypes);
 
 				delete propertiesFromJSDoc.argumentTypes;
 				break;
