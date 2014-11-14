@@ -96,7 +96,7 @@ define(function (require, exports, module) {
 		this.typeInformation = hostEditor.document.typeInformationCollection.typeInformationForFunctionIdentifier(this.functionIdentifier);
 
 		hostEditor.addInlineWidgetAbove({ line: endPos.line + 1, ch: 0 }, this, true);
-		hostEditor._hideLines(startPos.line, endPos.line + 1);
+		this._textMarker = hostEditor._hideLines(startPos.line, endPos.line + 1);
 	}
 
 	DocumentationInlineEditor.prototype = Object.create(InlineWidget.prototype);
@@ -115,6 +115,12 @@ define(function (require, exports, module) {
 	 * @type {!CodeMirror.Bookmark}
 	 */
 	DocumentationInlineEditor.prototype._endBookmark = null;
+
+	/**
+	 * A CodeMirror.TextMarker representing the hidden portion of the source code
+	 * @type {!CodeMirror.TextMarker}
+	 */
+	DocumentationInlineEditor.prototype._textMarker = null;
 
 	/**
 	 * A div to hold the actual content of the widget
@@ -215,46 +221,8 @@ define(function (require, exports, module) {
 	 * @return {?{start:{line:number, ch:number}, end:{line:number, ch:number}}}
 	 */
 	DocumentationInlineEditor.prototype.getCurrentRange = function () {
-		var start, end;
-		
-		start = this._startBookmark.find();
-		if (!start) {
-			return null;
-		}
-		
-		end = this._endBookmark.find();
-		if (!end) {
-			end = { line: start.line };
-		}
-		
-		// Even if we think we have a good end bookmark, we want to run the
-		// regexp match to see if there's a valid match that extends past the bookmark.
-		var i = start.line; 
-		var matches, line;
-		do {
-			line = this.hostEditor.document.getLine(i);
-			matches = line.match(/^\s*\/?\*/);
-			i++;			
-		} while (matches);
-
-		// end = { line: i - 2 };
-		if (end.line < (i - 2)) {
-			end = { line: i };
-			line = this.hostEditor.document.getLine(end.line);
-			matches = line.match(/^\s*\*\//);
-			if (matches) {
-				end.ch = matches.index + matches[0].length;
-				this._endBookmark.clear(); 
-				this._endBookmark = this.hostEditor._codeMirror.setBookmark(end);
-			}
-		}
-		
-		if (end.ch === undefined) {
-			// We were unable to resync the end bookmark.
-			return null;
-		} else {
-			return {start: start, end: end};
-		}
+		var currentRange = this._textMarker.find();
+		return { start: currentRange.from, end: currentRange.to };
 	};
 
 	/**
@@ -688,7 +656,7 @@ define(function (require, exports, module) {
 	 */
 	DocumentationInlineEditor.prototype._availableDocPartTypes = function() {
 		var localDocPartOrder = _.clone(DOC_PART_ORDER);
-		if (this.typeInformation.argumentTypes === undefined) {
+		if ((this.typeInformation.argumentTypes === undefined) || (this.typeInformation.argumentTypes.length === 0)) {
 			localDocPartOrder.splice(localDocPartOrder.indexOf("parameters"), 1);
 		}
 		if (this.typeInformation.returnType === undefined) {
