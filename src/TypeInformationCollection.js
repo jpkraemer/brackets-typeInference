@@ -51,8 +51,23 @@ define(function (require, exports, module) {
 		this._document = document;
 		this._functionTypeInformationArray = []; 
 
+		TypeInformationCollection.allTypeInformationCollections.push(this);
+
+		$(this.document.functionTracker).on("change", this._functionTrackerUpdate);
+
 		this.load();
 	}
+
+	TypeInformationCollection.allTypeInformationCollections = [];
+	TypeInformationCollection.typeInformationForFunctionIdentifier = function (functionIdentifier) {
+		var typeInformation; 
+		_.each(TypeInformationCollection.allTypeInformationCollections, function (collection) {
+			typeInformation = collection.typeInformationForFunctionIdentifier(functionIdentifier);
+			return (typeInformation === undefined); //exit when found by returning false
+		});
+
+		return typeInformation;
+	};
 
 	TypeInformationCollection.prototype.constructor = TypeInformationCollection; 
 
@@ -75,22 +90,34 @@ define(function (require, exports, module) {
 		return _.find(this._functionTypeInformationArray, { functionIdentifier: functionIdentifier });
 	};
 
-	TypeInformationCollection.prototype.load = function () {
-		this._functionTypeInformationArray = [];
+	TypeInformationCollection.prototype.typeInformationForFunctionName = function(functionName) {
+		return _.find(this._functionTypeInformationArray, { name: functionName });
+	};
 
+	TypeInformationCollection.prototype._functionTrackerUpdate = function(event) {
 		var allFunctions = this.document.functionTracker.getAllFunctions(); 
 		for (var i = 0; i < allFunctions.length; i++) {
 			var functionInformation = allFunctions[i];
-			var functionTypeInformation; 
-			if (functionInformation.commentRange !== undefined) {
-				var commentText = this.document.getRange(functionInformation.commentRange.start, functionInformation.commentRange.end);
-				commentText = commentText.replace(/^\s*(?:\*\/?|\/\*\*)/mg, "");
-				functionTypeInformation = new FunctionTypeInformation(functionInformation.functionIdentifier, commentText);
-			} else {
-				functionTypeInformation = new FunctionTypeInformation(functionInformation.functionIdentifier);
+
+			if (! _.some(this._functionTypeInformationArray, { functionIdentifier: functionInformation.functionIdentifier })) {
+				var functionTypeInformation; 
+				if (functionInformation.commentRange !== undefined) {
+					var commentText = this.document.getRange(functionInformation.commentRange.start, functionInformation.commentRange.end);
+					commentText = commentText.replace(/^\s*(?:\*\/?|\/\*\*)/mg, "");
+					functionTypeInformation = new FunctionTypeInformation(functionInformation.functionIdentifier, commentText);
+				} else {
+					functionTypeInformation = new FunctionTypeInformation(functionInformation.functionIdentifier);
+				}
+				this._functionTypeInformationArray.push(functionTypeInformation);
 			}
-			this._functionTypeInformationArray.push(functionTypeInformation);
 		}
+
+		$(this).trigger("change");
+	};
+
+	TypeInformationCollection.prototype.load = function () {
+		this._functionTypeInformationArray = [];
+		this._functionTrackerUpdate();
 	};
 
 	TypeInformationCollection.prototype.save = function () { 
@@ -129,4 +156,6 @@ define(function (require, exports, module) {
 			}
 		}
 	};
+
+	module.exports = TypeInformationCollection;
 });

@@ -10,8 +10,6 @@ define(function (require, exports, module) {
 	var DocumentManger				= brackets.getModule("document/DocumentManager");
 	var EditorManager				= brackets.getModule("editor/EditorManager");
 	var ExtensionUtils				= brackets.getModule("utils/ExtensionUtils");
-	var FunctionTracker				= require("./src/FunctionTracker");
-	var JSDocTypeProvider			= require("./src/JSDocTypeProvider");
 	var JSUtils						= brackets.getModule("language/JSUtils");
 	var ScopeManagerExtensions 		= require("./src/ScopeManagerExtensions");
 	var SessionExtensions 			= require("./src/SessionExtensions");
@@ -19,9 +17,8 @@ define(function (require, exports, module) {
 	var TestCaseCollectionManager	= require("./src/TestCaseCollectionManager");
 	var TheseusAgentWrapper 		= require("./src/TheseusAgentWrapper");
 	var TheseusTypeProvider 		= require("./src/TheseusTypeProvider");
-	var TypeInformationStore 		= require("./src/TypeInformationStore"); 
 	var TypeInformationCollection 	= require("./src/TypeInformationCollection");
-	var FunctionTracker2 			= require("./src/FunctionTracker2");
+	var FunctionTracker 			= require("./src/FunctionTracker");
 	var TIUtils 					= require("./src/TIUtils");
 
 	var EVENT_NAMESPACE = ".type-inference-main";
@@ -36,14 +33,7 @@ define(function (require, exports, module) {
 
 		ExtensionUtils.loadStyleSheet(module, "main.less");
 
-		TypeInformationStore.init();
-		TypeInformationStore.setOptions({
-			mergeAutomaticUpdatesConservatively: true
-		});
-
 		TheseusTypeProvider.init();
-		JSDocTypeProvider.init();
-		FunctionTracker.init();
 		TestCaseCollectionManager.init();
 
 		//initialize overwrites
@@ -52,8 +42,6 @@ define(function (require, exports, module) {
 
 		$(DocumentManger).on("currentDocumentChange", _currentDocumentChange);
 		_currentDocumentChange(null, DocumentManger.getCurrentDocument());
-
-		$(TypeInformationStore).on("didUpdateTypeInformation", _didUpdateTypeInformation); 
 
 		testCasesPane = new TestCasesPane();
 	}
@@ -65,13 +53,21 @@ define(function (require, exports, module) {
 	 * @param  {Document} previousDocument
 	 */
 	function _currentDocumentChange (evt, newCurrentDocument, previousDocument) {
+		if (currentDocument === newCurrentDocument) {
+			return;
+		}
+
+		if (currentDocument) {
+			$(currentDocument.typeInformationCollection).off(EVENT_NAMESPACE);
+		}
+
 		_.forOwn(inlineWidgetsByFunctionIdentifier, function (editor) {
 			editor.close();
 		});
 		inlineWidgetsByFunctionIdentifier = {};
 
 		if (hostEditor !== undefined) { 
-			hostEditor._codeMirror.off(EVENT_NAMESPACE);
+			hostEditor._codeMirror.off("keydown", _onEditorKeyEvent);
 		}
 
 		currentDocument = newCurrentDocument;
@@ -83,6 +79,11 @@ define(function (require, exports, module) {
 		hostEditor = EditorManager.getCurrentFullEditor();
 		hostEditor._codeMirror.on("keydown", _onEditorKeyEvent);
 
+		$(currentDocument.typeInformationCollection).on("change" + EVENT_NAMESPACE, _updateWidgets);
+		_updateWidgets();
+	}
+
+	function _updateWidgets (event) {
 		var functionInfos = currentDocument.functionTracker.getAllFunctions();
 		_.forOwn(functionInfos, function (functionInfo) {
 			if (inlineWidgetsByFunctionIdentifier[functionInfo.functionIdentifier] === undefined) {
@@ -94,17 +95,6 @@ define(function (require, exports, module) {
 				}
 			}
 		});
-	}
-
-	function _didUpdateTypeInformation (evt, newDoc) {
-		if ((inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] === undefined) && 
-			(newDoc.file === currentDocument.file.fullPath)) {
-
-			var functionLocation = currentDocument.functionTracker.getFunctionInformationForIdentifier(newDoc.functionIdentifier);
-			if (functionLocation !== undefined) {
-				inlineWidgetsByFunctionIdentifier[newDoc.functionIdentifier] = new DocumentationInlineEditor(newDoc.functionIdentifier, hostEditor, functionLocation.commentRange.start, functionLocation.commentRange.end);
-			}
-		}
 	}
 
     function _onEditorKeyEvent (theEditor, event) { 	
