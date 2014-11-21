@@ -60,7 +60,7 @@ define(function (require, exports, module) {
 
 		var resultPromise = new $.Deferred();
 
-		var path = testSuite.id.split("-").slice(0,-3).join("-");
+		var path = testSuite.id.match(/(.*)\-function\-/)[1];
 		DocumentManager.getDocumentForPath(path).done(function (document) {
 
 			var code = document.getText();
