@@ -48,7 +48,16 @@ define(function (require, exports, module) {
 
 	GeneratedTestCaseCollection.prototype._functionNameFromFunctionIdentifier = function(functionIdentifier) {
 		var functionIdentifierParts = functionIdentifier.split("-"); 
-		return functionIdentifierParts[functionIdentifierParts.length - 2];
+		var result; 
+		if (_.last(functionIdentifierParts).indexOf('.') !== -1) {
+			//new style ids 
+			var closureDepthParts = _.last(functionIdentifierParts).split(".");
+			result = _.last(closureDepthParts);
+		} else {
+			//old style ids
+			result = functionIdentifierParts[functionIdentifierParts.length - 2];
+		}
+		return result;
 	};
 
 	GeneratedTestCaseCollection.prototype._functionCodeVariableNameForFunctionName = function(functionName) {
