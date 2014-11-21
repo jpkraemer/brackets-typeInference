@@ -93,6 +93,7 @@ define(function (require, exports, module) {
 		this.$htmlContent.off();
 
 		this.load(hostEditor);
+		this.functionTracker = hostEditor.document.functionTracker;
 		this.typeInformation = hostEditor.document.typeInformationCollection.typeInformationForFunctionIdentifier(this.functionIdentifier);
 
 		hostEditor.addInlineWidgetAbove({ line: endPos.line + 1, ch: 0 }, this, true);
@@ -159,6 +160,9 @@ define(function (require, exports, module) {
 	 */
 	DocumentationInlineEditor.prototype._bookmarksForInvocationId = undefined;
 
+	DocumentationInlineEditor.prototype._functionTracker = undefined;
+	DocumentationInlineEditor.prototype._eventNamespace = undefined;
+
 	Object.defineProperties(DocumentationInlineEditor.prototype, {
 		"typeInformation": {
 			get: function () { return this._typeInformation; },
@@ -171,6 +175,25 @@ define(function (require, exports, module) {
 					this._render();
 				}
 			}
+		},
+		"functionTracker": {
+			get: function () { return this._functionTracker; },
+			set: function (newValue) {
+				if (newValue !== this._functionTracker) {
+					$(this.functionTracker).off("change." + this.eventNamespace);
+					this._functionTracker = newValue;
+					$(this.functionTracker).on("change." + this.eventNamespace, this.functionTrackerDidUpdate);
+				}
+			}
+		},
+		"eventNamespace": {
+			get: function () {
+				if (this._eventNamespace === undefined) {
+					this._eventNamespace = Math.random().toString(36).replace(/[^a-z]+/g, '');
+				}
+				return this._eventNamespace;
+			},
+			set: function () { throw new Error ("Should not set event namespace"); }
 		}
 	});
 
@@ -216,13 +239,32 @@ define(function (require, exports, module) {
 	};
 
 	/**
+	 * Called when the function tracker updated. This happens after a safe, so we can update the region to hide now. 
+	 */
+	DocumentationInlineEditor.prototype.functionTrackerDidUpdate = function(event) {
+		var functionInfo = this.functionTracker.getFunctionInformationForIdentifier(this.functionIdentifier);
+		var currentRange = this.getCurrentRange();
+		if ((functionInfo && functionInfo.commentRange) && 
+			((currentRange.start.line !== functionInfo.commentRange.start.line) || 
+			 (currentRange.end.line !== functionInfo.commentRange.end.line))) {
+			this._textMarker.clear(); 
+			this._textMarker = this.hostEditor._hideLines(functionInfo.commentRange.start.line, functionInfo.commentRange.end.line + 1);
+			this.hostEditor._codeMirror.refresh();
+		}
+	};
+
+	/**
 	 * Returns the current text range of the color we're attached to, or null if
 	 * we've lost sync with what's in the code.
 	 * @return {?{start:{line:number, ch:number}, end:{line:number, ch:number}}}
 	 */
 	DocumentationInlineEditor.prototype.getCurrentRange = function () {
 		var currentRange = this._textMarker.find();
-		return { start: currentRange.from, end: currentRange.to };
+		if (currentRange !== undefined) {
+			return { start: currentRange.from, end: currentRange.to };
+		} else {
+			return { start: 0, end: 0 };
+		}
 	};
 
 	/**

@@ -297,9 +297,9 @@ define(function (require, exports, module) {
 				}
 				
 				this._functionInformationArray.push(functionInfo);
-
-				$(this).trigger("change");
 			}.bind(this));
+
+			$(this).trigger("change");
 		}
 	};
 });
