@@ -17,7 +17,7 @@ define(function (require, exports, module) {
 	function init () {
 		TheseusAgentWrapper.registerForTheseusUpdates(function (result) {
 			var nodeIdComponents = result.nodeId.split("-"); 
-			return (nodeIdComponents[nodeIdComponents.length - 3] === "function");
+			return /(.*)\-function\-[^\/]*$/.test(result.nodeId);
 		}, _newLogsHandler); 
 	}
 
@@ -39,6 +39,9 @@ define(function (require, exports, module) {
 					result.spec = _.mapValues(theseusType.spec, function (elem) {
 						return thesusTypeToTypeSpec(elem);
 					});
+					if (theseusType.name !== "Object") {
+						result.name = theseusType.name;
+					}
 			}
 
 			return result;

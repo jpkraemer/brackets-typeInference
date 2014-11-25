@@ -242,9 +242,13 @@ define(function (require, exports, module) {
 		for (var i = 0; i < results.length; i++) {
 			var result = results[i]; 
 			var suggestion = {
-				arguments: _.map(result.arguments, argumentMappingFunction),
-				returnValue: result.returnValue.json
+				arguments: _.map(result.arguments, argumentMappingFunction)
 			};
+			if ((result.returnValue !== undefined) && (result.returnValue.json !== undefined)) {
+				suggestion.returnValue = result.returnValue;
+			} else {
+				suggestion.returnValue = "";
+			}
 			newSuggestions.push(suggestion);
 		}
 

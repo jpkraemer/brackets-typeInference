@@ -17,7 +17,7 @@ define(function (require, exports, module) {
 		var singleArgumentTemplate = require("text!./templates/singleArgument.html");
 		var templateValues = {
 			isArgument: isArgument,
-			name: type.name,
+			name: (type.name !== undefined) ? type.name : "<i>unnamed</i>",
 			type: typeSpecToHTML(type.type)
 		};
 
@@ -71,17 +71,20 @@ define(function (require, exports, module) {
 				result = "[" + _.map(type.spec, typeSpecToHTML).join(', ') + "]";
 				break;
 			case "object": 
-				result = "{ "; 
-				result +=  _.chain(type.spec)
-								.mapValues(typeSpecToHTML)
-								.pairs()
-								.map(function (pair) { return pair.join(": "); })
-								.value()
-								.join(", ");
-				result += " }";
-
-				if (result.length > 100) {
-					//TODO: tree view object
+				if (type.name !== undefined) {
+					result = type.name;
+				} else {
+					result = "{ "; 
+					result +=  _.chain(type.spec)
+									.mapValues(typeSpecToHTML)
+									.pairs()
+									.map(function (pair) { return pair.join(": "); })
+									.value()
+									.join(", ");
+					result += " }";
+					if (result.length > 100) {
+						//TODO: tree view object
+					}
 				}
 
 				break; 

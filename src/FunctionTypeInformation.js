@@ -101,26 +101,37 @@ define(function (require, exports, module) {
 
 			switch (jsdocType.type) {
 				case "NameExpression":
-					this.type = jsdocType.name.toLowerCase(); 
-					var splitAtDot = this.type.split("."); 
-					if (splitAtDot.length === 2) {
-						this.type = splitAtDot[0];
-						var countString = splitAtDot[1];
-						var splitAtDash = countString.split("-");
-						if (splitAtDash.length === 2) {
-							this.count = {
-								min: Number(splitAtDash[0]),
-								max: Number(splitAtDash[1])
-							};
-						} else {
-							this.count = Number(countString);
-						}
-					}
+					var name = jsdocType.name; 
 
-					if (this.type === "array") {
-						this.spec = [];
-					} else if (this.type === "object") {
-						this.spec = {};
+					var splitAtDot = name.split("."); 
+					var countString = _.last(splitAtDot);
+					var splitAtDash = countString.split("-");
+					var count; 
+					if (splitAtDash.length === 2) {
+						count = {
+							min: Number(splitAtDash[0]),
+							max: Number(splitAtDash[1])
+						};
+					} else if (!isNaN(Number(countString))) {
+						count = Number(countString);
+					}
+					
+					if (count !== undefined) {
+						var remaining = splitAtDot.slice(0,-1).join(".");
+						var newlyParsed = doctrine.parse("@return {" + remaining + "}", { recoverable: true });
+						var tmpType = new TypeSpec(newlyParsed.tags[0].type);
+						this.type = tmpType.type; 
+						this.name = tmpType.name; 
+						this.spec = tmpType.spec; 
+						this.count = count;
+					} else {
+						this.type = jsdocType.name;
+						
+						if (this.type.toLowerCase() === "array") {
+							this.spec = [];
+						} else if (this.type.toLowerCase() === "object") {
+							this.spec = {};
+						}
 					}
 					
 					break; 
@@ -153,12 +164,14 @@ define(function (require, exports, module) {
 	TypeSpec.prototype.type = undefined;
 	TypeSpec.prototype.spec = undefined;
 	TypeSpec.prototype.count = undefined;
+	TypeSpec.prototype.name = undefined;
 
 	TypeSpec.prototype.copy = function() {
 		var result = new TypeSpec();
 
 		result.type = this.type;
 		result.count = _.cloneDeep(this.count);
+		result.name = this.name;
 		switch(result.type) {
 			case "array": 
 			case "multiple":
@@ -184,14 +197,18 @@ define(function (require, exports, module) {
 				result = "[" + _.map(this.spec, function (typeSpec) { return typeSpec.toJSDoc(); }).join(', ') + "]";
 				break;
 			case "object":
-				result = "{ "; 
-				result +=  _.chain(this.spec)
-								.mapValues(function (typeSpec) { return typeSpec.toJSDoc(); })
-								.pairs()
-								.map(function (pair) { return pair.join(": "); })
-								.value()
-								.join(", ");
-				result += " }";
+				if (this.name !== undefined) {
+					result = this.name; 
+				} else { 
+					result = "{ "; 
+					result +=  _.chain(this.spec)
+									.mapValues(function (typeSpec) { return typeSpec.toJSDoc(); })
+									.pairs()
+									.map(function (pair) { return pair.join(": "); })
+									.value()
+									.join(", ");
+					result += " }";
+				}
 				break; 
 			case "multiple":
 				result = "(" + _.pluck(this.spec, "type").join("|") + ")";
@@ -232,14 +249,18 @@ define(function (require, exports, module) {
 					}
 					break;
 				case "object": 
-					var xor = _.xor(_.keys(this.spec), _.keys(typeSpec.spec));
-					if (xor.length === 0) {
-						//keys are the same
-						result = _.every(this.type.spec, function (element, index) {
-							element.matchesTypeSpec(typeSpec.spec[index]);
-						});
+					if ((this.name !== undefined) && (typeSpec.name !== undefined)) {
+						result = (this.name === typeSpec.name);
 					} else {
-						result = false;
+						var xor = _.xor(_.keys(this.spec), _.keys(typeSpec.spec));
+						if (xor.length === 0) {
+							//keys are the same
+							result = _.every(this.type.spec, function (element, index) {
+								element.matchesTypeSpec(typeSpec.spec[index]);
+							});
+						} else {
+							result = false;
+						}
 					}
 					break;
 				default:
@@ -321,7 +342,7 @@ define(function (require, exports, module) {
 					result.spec = resultSpec;
 					break;
 				case "multiple":
-					result.spec.concat(typeSpec.spec);
+					result.spec = result.spec.concat(typeSpec.spec);
 					break;
 			}
 
@@ -410,11 +431,13 @@ define(function (require, exports, module) {
 				}
 			}
 
-			this.argumentTypes.concat(result.argumentTypes.slice(j));
+			this.argumentTypes = this.argumentTypes.concat(result.argumentTypes.slice(j));
 
 			if (this.returnType === undefined) {
-				this.returnType = new TypeInformation();
-				this.returnType.type = result.returnType;
+				if (result.returnType !== undefined) {
+					this.returnType = new TypeInformation();
+					this.returnType.type = result.returnType;
+				}
 			} else if (! this.returnType.type.matchesTypeSpec(result.returnType)) {
 				this.returnType.conflicts[result.theseusInvocationId] = result.returnType;
 			} else {
@@ -456,7 +479,7 @@ define(function (require, exports, module) {
 			if (editedPartTypeSpecifier.partType === "description") {
 				Array.unshift.apply(this.argumentTypes, propertiesFromJSDoc.argumentTypes);
 			} else if (editedPartTypeSpecifier.partType === "return") {
-				this.argumentTypes.concat(propertiesFromJSDoc.argumentTypes);
+				this.argumentTypes = this.argumentTypes.concat(propertiesFromJSDoc.argumentTypes);
 			}
 		}
 	};
