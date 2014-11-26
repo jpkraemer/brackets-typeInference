@@ -23,6 +23,13 @@ define(function (require, exports, module) {
 	 * It is a terrible hack and should be avoided in the future.
 	 */
 	Editor.prototype.addInlineWidgetAbove = function (pos, inlineWidget, scrollLineIntoView) {
+		//When this is first called on an editor, remove the Esc key handler
+		var keyMap = this._codeMirror.getOption("extraKeys");
+		if (_.has(keyMap, "Esc")) {
+			delete keyMap.Esc;
+			this._codeMirror.setOption("extraKeys", keyMap);
+		}
+
 		var self = this,
 			queue = this._inlineWidgetQueues[pos.line],
 			deferred = new $.Deferred();
