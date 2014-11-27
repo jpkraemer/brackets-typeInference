@@ -64,6 +64,8 @@ define(function (require, exports, module) {
 		this.$pane = $(require("text!./templates/TestCasesPane.html"));
 		this.$scollView = this.$pane.find('.ti-scrollView');
 		Resizer.makeResizable(this.$pane.get(0), Resizer.DIRECTION_HORIZONTAL, "left");
+		this.$pane.on("panelResizeUpdate", this.onPaneResize);
+		$(window).on("resize", this.onPaneResize);
 
 		var $selectorsContainer = this.$pane.find(".ti-testCasesPaneHeader .ti-centerHoriz");
 
@@ -82,7 +84,7 @@ define(function (require, exports, module) {
 		this.$pane.find('.ti-roundAddButton').on('click', this.addTestButtonClicked); 
 
 		this.$pane.insertBefore('#editor-holder > .CodeMirror');
-		$('#editor-holder > .CodeMirror').width("50%");
+		// $('#editor-holder > .CodeMirror').width("50%");
 
 		//respond to events 
 		$(DocumentManager).on("currentDocumentChange", this.currentDocumentChanged); 
@@ -94,6 +96,8 @@ define(function (require, exports, module) {
 		$(TestCaseCollectionManager).on("updatedTestResults", this._onUpdatedTestResults);
 
 		$(DocumentManager).on("documentSaved", this.documentSaved);
+
+		this.onPaneResize(null, this.$pane.width());
 	}
 
 	TestCasesPane.prototype.constructor = TestCasesPane; 
@@ -175,6 +179,15 @@ define(function (require, exports, module) {
 			set: function () { throw new Error("Cannot set mode"); }
 		}
 	});
+
+ 	TestCasesPane.prototype.onPaneResize = function(event, newWidth) {
+ 		var $codeMirrorElement = $(this.currentFullEditor.getRootElement());
+ 		if (newWidth === undefined) {
+ 			newWidth = this.$pane.width();
+ 		}
+ 		$codeMirrorElement.width($codeMirrorElement.parent().width() - newWidth - 1); //1px to prevent wrapping
+ 		this.currentFullEditor._codeMirror.refresh();
+ 	};
 
  	TestCasesPane.prototype.closeAddAreaClicked = function(event) {
  		this.$scollView.find(".ti-addArea").slideUp("fast");
