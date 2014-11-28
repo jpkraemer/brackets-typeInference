@@ -465,7 +465,7 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype._update = function() {
-		// this.updateTestCases();
+		this.updateTestCases();
 		this._clear();
 		
 		if (this.testSuite === undefined) {
