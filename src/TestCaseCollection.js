@@ -135,107 +135,7 @@ define(function (require, exports, module) {
 		var result = $.Deferred();
 
 		DocumentManager.getDocumentText(this.file).done(function (testSourceCode) {
-		
-			var extractCodeFromLocation = function (node, location) {
-				var lines = testSourceCodeLines.slice(location.start.line - 1, location.end.line);
-				lines[0] = lines[0].substr(location.start.column); 
-				for (var i = 1; i < lines.length - 1; i++) {
-					if (/^\s*$/.test(lines[i].substr(0, node.loc.start.column))) {
-						lines[i] = lines[i].substr(node.loc.start.column);
-					}
-				}
-				lines[lines.length - 1] = lines[lines.length - 1].substr(0, location.end.column);
-				if (/^\s*$/.test(lines[lines.length - 1].substr(0, node.loc.start.column))) {
-					lines[lines.length - 1] = lines[lines.length - 1].substr(node.loc.start.column);
-				}
-
-				return lines.join("\n");
-			};
-
-			var testSourceCodeLines = testSourceCode.split("\n");
-			var testSuites = {}; 
-
-			try {
-				var testAst = Esprima.parse(testSourceCode, {
-					attachComment: true, 
-					loc: true, 
-					tolerant: true
-				});
-
-				testAst = testAst.body;
-
-				_.forEach(testAst, function (node) {
-					if ((node.type === "ExpressionStatement") && 
-						(node.expression.type === "CallExpression") &&
-						(node.expression.callee.name === "describe")) {
-
-						var suiteNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
-						var suiteId = suiteNameComponents[0];
-						var suiteName = suiteNameComponents.slice(1).join(SEPARATOR);
-
-						testSuites[suiteId] = _.cloneDeep(this.testSuiteTemplate);
-						testSuites[suiteId].id = suiteId;
-						testSuites[suiteId].title = suiteName;
-
-						var individualTestsAst = node.expression.arguments[1].body.body; 
-						var beforeAllNodes = [];
-						var foundFirstJasmineNode = false;
-
-						_.forEach(individualTestsAst, function (node) {
-							var i;
-
-							if ((node.type === "ExpressionStatement") && (node.expression.type === "CallExpression")) {
-								if (node.expression.callee.name === "it") {
-									foundFirstJasmineNode = true;
-
-									var testFunctionLocation = node.expression.arguments[1].loc; 
-									var testFunctionLines = testSourceCodeLines.slice(testFunctionLocation.start.line - 1, testFunctionLocation.end.line);
-									testFunctionLines[0] = testFunctionLines[0].substr(testFunctionLocation.start.column); 
-									for (i = 1; i < testFunctionLines.length - 1; i++) {
-										if (/^\s*$/.test(testFunctionLines[i].substr(0, node.loc.start.column))) {
-											testFunctionLines[i] = testFunctionLines[i].substr(node.loc.start.column);
-										}
-									}
-									testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(0, testFunctionLocation.end.column);
-									if (/^\s*$/.test(testFunctionLines[testFunctionLines.length - 1].substr(0, node.loc.start.column))) {
-										testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(node.loc.start.column);
-									}
-
-									var literalTestCaseNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
-
-									var testCase = {
-										id: literalTestCaseNameComponents[0],
-										suiteId: suiteId,
-										title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
-										code: extractCodeFromLocation(node, node.expression.arguments[1].loc),
-										sourceLocation: node.expression.arguments[1].loc
-									};
-
-									testSuites[suiteId].tests.push(testCase);
-								} else if (node.expression.callee.name === "beforeEach") {
-									foundFirstJasmineNode = true;
-									testSuites[suiteId].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
-								} else if (node.expression.callee.name === "afterEach") {
-									foundFirstJasmineNode = true;
-									testSuites[suiteId].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
-								}
-							} else if (! foundFirstJasmineNode) {
-								beforeAllNodes.push(node);
-							}
-						});
-
-						testSuites[suiteId].beforeAll.code = Escodegen.generate({
-							type: "Program",
-							body: beforeAllNodes
-						});
-					}
-				}.bind(this));
-			} catch (e) {
-				TIUtils.log("Invalid contents of generated test file.");
-				throw e;
-			}
-
-			result.resolve(testSuites);
+			result.resolve(this._parseTestFromCode(testSourceCode));
 		}.bind(this)).fail(function (err) {
 			if (err === "NotFound") {
 				//happens for newly created files that do not yet exist on disk
@@ -246,7 +146,111 @@ define(function (require, exports, module) {
 		return result.promise();
 	};
 
+	TestCaseCollection.prototype._parseTestFromCode = function(testSourceCode) {
+		var extractCodeFromLocation = function (node, location) {
+			var lines = testSourceCodeLines.slice(location.start.line - 1, location.end.line);
+			lines[0] = lines[0].substr(location.start.column); 
+			for (var i = 1; i < lines.length - 1; i++) {
+				if (/^\s*$/.test(lines[i].substr(0, node.loc.start.column))) {
+					lines[i] = lines[i].substr(node.loc.start.column);
+				}
+			}
+			lines[lines.length - 1] = lines[lines.length - 1].substr(0, location.end.column);
+			if (/^\s*$/.test(lines[lines.length - 1].substr(0, node.loc.start.column))) {
+				lines[lines.length - 1] = lines[lines.length - 1].substr(node.loc.start.column);
+			}
+
+			return lines.join("\n");
+		};
+
+		var testSourceCodeLines = testSourceCode.split("\n");
+		var testSuites = {};
+
+		try {
+			var testAst = Esprima.parse(testSourceCode, {
+				attachComment: true, 
+				loc: true, 
+				tolerant: true
+			});
+
+			testAst = testAst.body;
+
+			_.forEach(testAst, function (node) {
+				if ((node.type === "ExpressionStatement") && 
+					(node.expression.type === "CallExpression") &&
+					(node.expression.callee.name === "describe")) {
+
+					var suiteNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
+					var suiteId = suiteNameComponents[0];
+					var suiteName = suiteNameComponents.slice(1).join(SEPARATOR);
+
+					testSuites[suiteId] = _.cloneDeep(this.testSuiteTemplate);
+					testSuites[suiteId].id = suiteId;
+					testSuites[suiteId].title = suiteName;
+
+					var individualTestsAst = node.expression.arguments[1].body.body; 
+					var beforeAllNodes = [];
+					var foundFirstJasmineNode = false;
+
+					_.forEach(individualTestsAst, function (node) {
+						var i;
+
+						if ((node.type === "ExpressionStatement") && (node.expression.type === "CallExpression")) {
+							if (node.expression.callee.name === "it") {
+								foundFirstJasmineNode = true;
+
+								var testFunctionLocation = node.expression.arguments[1].loc; 
+								var testFunctionLines = testSourceCodeLines.slice(testFunctionLocation.start.line - 1, testFunctionLocation.end.line);
+								testFunctionLines[0] = testFunctionLines[0].substr(testFunctionLocation.start.column); 
+								for (i = 1; i < testFunctionLines.length - 1; i++) {
+									if (/^\s*$/.test(testFunctionLines[i].substr(0, node.loc.start.column))) {
+										testFunctionLines[i] = testFunctionLines[i].substr(node.loc.start.column);
+									}
+								}
+								testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(0, testFunctionLocation.end.column);
+								if (/^\s*$/.test(testFunctionLines[testFunctionLines.length - 1].substr(0, node.loc.start.column))) {
+									testFunctionLines[testFunctionLines.length - 1] = testFunctionLines[testFunctionLines.length - 1].substr(node.loc.start.column);
+								}
+
+								var literalTestCaseNameComponents = node.expression.arguments[0].value.split(SEPARATOR);
+
+								var testCase = {
+									id: literalTestCaseNameComponents[0],
+									suiteId: suiteId,
+									title: literalTestCaseNameComponents.slice(1).join(SEPARATOR),
+									code: extractCodeFromLocation(node, node.expression.arguments[1].loc),
+									sourceLocation: node.expression.arguments[1].loc
+								};
+
+								testSuites[suiteId].tests.push(testCase);
+							} else if (node.expression.callee.name === "beforeEach") {
+								foundFirstJasmineNode = true;
+								testSuites[suiteId].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+							} else if (node.expression.callee.name === "afterEach") {
+								foundFirstJasmineNode = true;
+								testSuites[suiteId].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+							}
+						} else if (! foundFirstJasmineNode) {
+							beforeAllNodes.push(node);
+						}
+					});
+
+					testSuites[suiteId].beforeAll.code = Escodegen.generate({
+						type: "Program",
+						body: beforeAllNodes
+					});
+				}
+			}.bind(this));
+		} catch (e) {
+			TIUtils.log("Invalid contents of generated test file.");
+			throw e;
+		}
+
+		return testSuites;
+	};
+
 	TestCaseCollection.prototype.save = function () {
+		var resultPromise = new $.Deferred();
 		var resultAst = {
 		    type: "Program",
 		    body: _.map(this.testSuites, this._generateAstForSuite)
@@ -255,8 +259,12 @@ define(function (require, exports, module) {
 		var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 
 
 		this.file.write(code, function () {
-			// _currentDocumentChanged();
+			resultPromise.resolve();
 		});
+
+		this._testSuites = this._parseTestFromCode(code);
+
+		return resultPromise.promise();
 	};
 
 	TestCaseCollection.prototype._generateAstForSuite = function(testSuite) {

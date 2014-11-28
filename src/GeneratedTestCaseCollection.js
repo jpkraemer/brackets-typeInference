@@ -111,6 +111,7 @@ define(function (require, exports, module) {
 	};
 
 	GeneratedTestCaseCollection.prototype.save = function () {
+		var resultPromise = new $.Deferred();
 		var resultAst = {
 		    type: "Program",
 		    body: []
@@ -128,11 +129,15 @@ define(function (require, exports, module) {
 		 			var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 
 
 					this.file.write(code, function () {
-						// _currentDocumentChanged();
-					});
+						resultPromise.resolve();
+					}.bind(this));
+
+					this._testSuites = this._parseTestFromCode(code);
 		 		}
 		 	}.bind(this));
-		 }.bind(this));		
+		 }.bind(this));
+
+		 return resultPromise.promise();
 	};
 
 	module.exports = GeneratedTestCaseCollection;

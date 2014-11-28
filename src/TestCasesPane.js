@@ -239,7 +239,10 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.documentSaved = function(event, doc) {
 		if (DocumentManager.getCurrentDocument() === doc) { 
 			this.updateTestCases();
-			this.testCaseCollection.save();
+			this.testCaseCollection.save().done(function () {
+				this.testSuite = this.testCaseCollection.getTestSuiteForId(this.testSuiteId);
+				this._update();
+			}.bind(this));
 		}
 	};
 
