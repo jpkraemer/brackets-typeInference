@@ -125,7 +125,18 @@ define(function (require, exports, module) {
 						this.spec = tmpType.spec; 
 						this.count = count;
 					} else {
-						this.type = jsdocType.name;
+						if ([TypeSpecType.functionType, 
+							TypeSpecType.numberType, 
+							TypeSpecType.booleanType, 
+							TypeSpecType.stringType,
+							TypeSpecType.arrayType,
+							TypeSpecType.objectType].indexOf(jsdocType.name.toLowerCase()) !== -1) {
+							this.type = jsdocType.name;
+						} else {
+							this.type = TypeSpecType.objectType;
+							this.name = jsdocType.name;
+						}
+						
 						
 						if (this.type.toLowerCase() === "array") {
 							this.spec = [];
