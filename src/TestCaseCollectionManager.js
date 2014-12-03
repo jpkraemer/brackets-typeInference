@@ -136,7 +136,7 @@ define(function (require, exports, module) {
         return testCaseCollectionsByName[name];
     }
 
-	function _rescanTestCaseCollectins () {
+	function _rescanTestCaseCollections () {
 		var specPath = _getSpecPath();
 		var specDir = FileSystem.getDirectoryForPath(specPath);
 		specDir.getContents(function (error, entries, stats, entryErrors) {
@@ -170,7 +170,7 @@ define(function (require, exports, module) {
 		generatedTestCaseCollectionsByDocument = {};
         testCaseCollectionsByName = {};
 		userGeneratedTestCaseCollections = [];
-		_rescanTestCaseCollectins();
+		_rescanTestCaseCollections();
 	}
 
 	exports.init = init;
