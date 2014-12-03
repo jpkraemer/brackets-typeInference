@@ -72,7 +72,7 @@ define(function (require, exports, module) {
 
 		currentDocument = newCurrentDocument;
 
-		if (currentDocument.getLanguage().getMode() !== "javascript") {
+		if (!currentDocument || currentDocument.getLanguage().getMode() !== "javascript") {
 			return; 
 		}
 
