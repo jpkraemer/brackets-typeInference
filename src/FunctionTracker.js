@@ -184,7 +184,7 @@ define(function (require, exports, module) {
 		var parseAst = function (node, filter, callback) {
 			var nextNodes = []; 
 			var i; 
-			var propertiesToCheckFor = ["body", "consequent", "alternate"]; 
+			var propertiesToCheckFor = ["body", "consequent", "alternate", "expression", "right"]; 
 
 			for (i = 0; i < propertiesToCheckFor.length; i++) {
 				var property = propertiesToCheckFor[i]; 
@@ -201,7 +201,7 @@ define(function (require, exports, module) {
 				child.parent = node;
 			});
 
-			_(nextNodes).where(filter).each(callback);
+			_(nextNodes).filter(filter).each(callback);
 			
 			for (i = 0; i < nextNodes.length; i++) {
 				parseAst(nextNodes[i], filter, callback);
@@ -213,6 +213,16 @@ define(function (require, exports, module) {
 				new TILocation(loc.start.line - 1, loc.start.column),
 				new TILocation(loc.end.line - 1, loc.end.column)
 			);
+		};
+
+		var nameFromExpressionLhs = function (node) {
+			if (node.type === "Identifier") {
+				return node.name;
+			} else if (node.type === "MemberExpression") {
+				return nameFromExpressionLhs(node.object) + "." + nameFromExpressionLhs(node.property);
+			} else {
+				return undefined;
+			}
 		};
 
 		//try to use esprima first
@@ -232,13 +242,20 @@ define(function (require, exports, module) {
 		if (syntaxCorrect) {
 			this._functionInformationArray = [];
 
-			parseAst(ast, { type: "FunctionDeclaration" }, function (node) {
+			parseAst(ast, function (node) {
+				return (node.type === "FunctionDeclaration") || (node.type === "FunctionExpression"); 
+			}, function (node) {
+				if ((node.type === "FunctionExpression") && (node.parent.type !== "AssignmentExpression")) {
+					return; 
+				}
+
 				var functionInfo = new FunctionInformation(this.document);
 
 				//try to find a unique function identifer
-				if (node.leadingComments !== undefined) {
-					for (var i = 0; i < node.leadingComments.length; i++) {
-						var commentNode = node.leadingComments[i];
+				var leadingComments = (node.type === "FunctionDeclaration") ? node.leadingComments : node.parent.parent.leadingComments;
+				if (leadingComments !== undefined) {
+					for (var i = 0; i < leadingComments.length; i++) {
+						var commentNode = leadingComments[i];
 						if (commentNode.type === "Block") {
 							functionInfo._commentRange = esprimaLocationToRange(commentNode.loc);
 
@@ -251,28 +268,34 @@ define(function (require, exports, module) {
 					}
 				}
 
-				if (node.id !== undefined) {
+				if (node.id) {
 					functionInfo._name = node.id.name;
 				} else {
-					functionInfo._name = "anonymous";
+					functionInfo._name = nameFromExpressionLhs(node.parent.left); 
+					if (functionInfo._name === undefined) {
+						functionInfo._name = "anonymous";
+					}
 				}
 
 				if (functionInfo._functionIdentifier === undefined) {
 					var nameAndParents = functionInfo._name;
-					var parentNode = node.parent;
-					while (parentNode) {
-						var parentName;
-						if (parentNode.id !== undefined) {
-							parentName = parentNode.id.name;
-						} else if (parentNode.type === "Program") {
-							parentName = parentNode.type;
-						} else {
-							parentName = "anonymous" + parentNode.type;
+					if (node.type === "FunctionDeclaration") {
+						var parentNode = node.parent;
+						while (parentNode) {
+							var parentName;
+							if (parentNode.id !== undefined) {
+								parentName = parentNode.id.name;
+							} else if (parentNode.type === "Program") {
+								parentName = parentNode.type;
+							} else {
+								parentName = "anonymous" + parentNode.type;
+							}
+							nameAndParents = parentName + "." + nameAndParents;
+							parentNode = parentNode.parent;
 						}
-						nameAndParents = parentName + "." + nameAndParents;
-						parentNode = parentNode.parent;
 					}
-					functionInfo._functionIdentifier = this.document.file.fullPath + "-function-" + nameAndParents;
+
+					functionInfo._functionIdentifier = (this.document.file.fullPath + "-function-" + nameAndParents).replace(/\s/g, "");
 
 					//usually there should be no duplicates, i.e. two methods named equally in the same scope
 					var duplicateNumber = 1;
@@ -281,7 +304,11 @@ define(function (require, exports, module) {
 					}
 				}
 
-				functionInfo._functionRange = esprimaLocationToRange(node.loc);
+				if (node.type = "FunctionDeclaration") {
+					functionInfo._functionRange = esprimaLocationToRange(node.loc); 
+				} else {
+					functionInfo._functionRange = esprimaLocationToRange(node.parent.loc); 
+				}
 
 				if (this.document._masterEditor) {
 					functionInfo._functionBookmarks = {

@@ -129,6 +129,9 @@ define(function (require, exports, module) {
 				commentInset = this.document.getRange({ line: functionInfo.functionRange.start.line, ch: 0 }, functionInfo.functionRange.start);
 			}
 
+			//take only whitespace
+			commentInset = commentInset.match(/(\s*).*/)[1]; 
+
 			return commentInset;
 		}.bind(this);
 
@@ -152,7 +155,7 @@ define(function (require, exports, module) {
 				this.document.replaceRange(newComment, functionInfo.commentRange.start, functionInfo.commentRange.end);
 			} else {
 				newComment += "\n";
-				this.document.replaceRange(newComment, functionInfo.functionRange.start);
+				this.document.replaceRange(newComment, { line: functionInfo.functionRange.start.line, ch: 0 });
 			}
 		}
 	};
