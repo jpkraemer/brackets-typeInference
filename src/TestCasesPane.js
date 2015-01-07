@@ -108,6 +108,7 @@ define(function (require, exports, module) {
 	TestCasesPane.prototype.currentFullEditor = undefined;
 	TestCasesPane.prototype.functionIdentifier = undefined;
 	TestCasesPane.prototype.widgetsBySuite = undefined;
+	TestCasesPane.prototype.suiteBySuiteId = undefined;
 	TestCasesPane.prototype.suggestionWidgets = undefined;
 	TestCasesPane.prototype.previousExecutionsWidget = undefined;
 	TestCasesPane.prototype._testCaseCollection = undefined;
@@ -255,7 +256,8 @@ define(function (require, exports, module) {
 		_.forEach(this.widgetsBySuite, function (widgetsForSuite, suiteId) {
 			var testSuite = {
 				id: 	suiteId,
-				title:  this.testSuite.title,
+				title:  this.suiteBySuiteId[suiteId].title,
+				testCaseCollection: this.suiteBySuiteId[suiteId].testCaseCollection,
 				tests: 	_(widgetsForSuite).filter(function (widget) {
 							return ("testCase" in widget);
 						}).map(function(widget) {
@@ -274,7 +276,7 @@ define(function (require, exports, module) {
 			testSuite.beforeEach.code = beforeEachWidget !== undefined ? beforeEachWidget.code : "";
 			testSuite.afterEach.code = afterEachWidget !== undefined ? afterEachWidget.code : "";
 
-			this.testCaseCollection.updateTestSuite(testSuite);
+			testSuite.testCaseCollection.updateTestSuite(testSuite);
 		}.bind(this));
 	};
 
@@ -340,6 +342,8 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype._onSuiteSelectorChange = function() {
+		this.updateTestCases();
+
 		if (this.testSuiteId !== undefined) {
 			this.testSuite = this.testCaseCollection.getTestSuiteForId(this.testSuiteId);
 		} else {
@@ -406,6 +410,8 @@ define(function (require, exports, module) {
 	};
 	
 	TestCasesPane.prototype._updateTestCollectionList = function () {
+		this.updateTestCases();
+
 		var collections = TestCaseCollectionManager.getUserTestCaseCollections();
 		var content = _.map(collections, function (collectionName) {
 			return {
@@ -470,6 +476,7 @@ define(function (require, exports, module) {
 		}
 
 		this.widgetsBySuite = {};
+		this.suiteBySuiteId = {};
 		this.suggestionWidgets = [];
 
 		this.$scollView.find(".ti-testSection").remove();
@@ -478,7 +485,7 @@ define(function (require, exports, module) {
 	};
 
 	TestCasesPane.prototype._update = function() {
-		this.updateTestCases();
+		// this.updateTestCases();
 		this._clear();
 		
 		if (this.testSuite === undefined) {
@@ -486,6 +493,7 @@ define(function (require, exports, module) {
 		}
 
 		var widgetsForCurrentSuite = [];
+		this.suiteBySuiteId[this.testSuite.id] = this.testSuite;
 		this.widgetsBySuite[this.testSuite.id] = widgetsForCurrentSuite;	
 
 		var isModeSuite = (this.mode === TestCasesPaneMode.suite);

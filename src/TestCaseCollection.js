@@ -31,20 +31,6 @@ define(function (require, exports, module) {
 
 	TestCaseCollection.prototype.constructor = TestCaseCollection; 
 
-	TestCaseCollection.prototype.testSuiteTemplate = {
-		title: "",
-		tests: [], 
-		beforeAll: {
-			code: ""
-		},
-		beforeEach: {
-			code: "function () {\n\n}"
-		},
-		afterEach: {
-			code: "function () {\n\n}"
-		}
-	};
-
 	TestCaseCollection.prototype.file = undefined; 
 	TestCaseCollection.prototype._testSuites = undefined; 
 	TestCaseCollection.prototype.loadingPromise = undefined; 
@@ -56,6 +42,25 @@ define(function (require, exports, module) {
 		},
 		"loadingPromise": {
 			get: function () { return this._loadingPromise.promise(); },
+			set: function () { throw new Error("Cannot set loadingPromise"); }
+		},
+		"testSuiteTemplate": {
+			get: function () {
+				return {
+					title: "",
+					testCaseCollection: this,
+					tests: [], 
+					beforeAll: {
+						code: ""
+					},
+					beforeEach: {
+						code: "function () {\n\n}"
+					},
+					afterEach: {
+						code: "function () {\n\n}"
+					}
+				};
+			},
 			set: function () { throw new Error("Cannot set loadingPromise"); }
 		}
 	});
