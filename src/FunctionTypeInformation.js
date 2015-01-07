@@ -49,7 +49,7 @@ define(function (require, exports, module) {
 
 	TypeInformation.prototype.toJSDoc = function (asReturnType) {
 		var templateValues = {
-			name: this.name,
+			name: this.name || "unnamed",
 			description: this.description, 
 			type: this.type.toJSDoc()
 		}; 
