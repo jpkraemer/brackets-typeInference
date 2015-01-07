@@ -79,7 +79,13 @@ define(function (require, exports, module) {
  			get: function () { 
  				if (this._functionBookmarks !== undefined) {
  					if (this.document._masterEditor) {
-	 					this._functionRange = new TIRange(this._functionBookmarks.start.find(), this._functionBookmarks.end.find());
+ 						var newStart = this._functionBookmarks.start.find();
+ 						var newEnd = this._functionBookmarks.end.find();
+ 						if ((newStart !== undefined) && (newEnd !== undefined)) {
+		 					this._functionRange = new TIRange(newStart, newEnd);
+		 				} else {
+		 					this._functionBookmarks = undefined;
+		 				}
  					} else {
  						this._functionBookmarks = undefined;
  					}
@@ -93,7 +99,13 @@ define(function (require, exports, module) {
  			get: function () { 
  				if (this._commentBookmarks !== undefined) {
  					if (this.document._masterEditor) {
-	 					this._commentRange = new TIRange(this._commentBookmarks.start.find(), this._commentBookmarks.end.find());
+ 						var newStart = this._functionBookmarks.start.find();
+ 						var newEnd = this._functionBookmarks.end.find();
+ 						if ((newStart !== undefined) && (newEnd !== undefined)) {
+		 					this._commentRange = new TIRange(this._commentBookmarks.start.find(), this._commentBookmarks.end.find());
+		 				} else {
+		 					this._commentBookmarks = undefined;
+		 				}
  					} else {
  						this._commentBookmarks = undefined;
  					}

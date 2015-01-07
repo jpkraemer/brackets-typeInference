@@ -245,6 +245,11 @@ define(function (require, exports, module) {
 		});
 	};
 
+	DocumentationInlineEditor.prototype.close = function () {
+		this._textMarker.clear();
+		InlineWidget.prototype.close.call(this);
+	};
+
 	/**
 	 * Called when the function tracker updated. This happens after a safe, so we can update the region to hide now. 
 	 */

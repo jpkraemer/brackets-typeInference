@@ -139,9 +139,16 @@ define(function (require, exports, module) {
 			return commentInset + " * " + line;
 		};
 
+		var indexesToRemove = [];
+
 		for (var i = 0; i < this._functionTypeInformationArray.length; i++) {
 			var typeInformation = this._functionTypeInformationArray[i];
 			var functionInfo = this.document.functionTracker.getFunctionInformationForIdentifier(typeInformation.functionIdentifier);
+			if (functionInfo === undefined) {
+				//function deleted in code
+				indexesToRemove.push(i); 
+				continue;
+			}
 		
 			var jsDocString = typeInformation.toJSDoc(); 
 			var commentInset = _commentInsetForDocumentAndFunctionInfo(functionInfo);
@@ -157,6 +164,11 @@ define(function (require, exports, module) {
 				newComment += "\n";
 				this.document.replaceRange(newComment, { line: functionInfo.functionRange.start.line, ch: 0 });
 			}
+		}
+
+		_.forEach(indexesToRemove, function (i) { this._functionTypeInformationArray.splice(i, 1); }.bind(this));
+		if (indexesToRemove.length > 0) {
+			$(this).trigger("change");
 		}
 	};
 

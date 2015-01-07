@@ -95,6 +95,14 @@ define(function (require, exports, module) {
 				}
 			}
 		});
+
+		var functionIdentifersWithWidgets = _.keys(inlineWidgetsByFunctionIdentifier);
+		_.forEach(functionIdentifersWithWidgets, function (key) {
+			if (_.map(functionInfos, "functionIdentifier").indexOf(key) === -1) {
+				inlineWidgetsByFunctionIdentifier[key].close();
+				delete inlineWidgetsByFunctionIdentifier[key];
+			}
+		});
 	}
 
     function _onEditorKeyEvent (theEditor, event) { 	
