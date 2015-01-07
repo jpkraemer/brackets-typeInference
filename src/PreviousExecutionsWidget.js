@@ -245,7 +245,7 @@ define(function (require, exports, module) {
 				arguments: _.map(result.arguments, argumentMappingFunction)
 			};
 			if ((result.returnValue !== undefined) && (result.returnValue.json !== undefined)) {
-				suggestion.returnValue = result.returnValue;
+				suggestion.returnValue = result.returnValue.json;
 			} else {
 				suggestion.returnValue = "";
 			}
