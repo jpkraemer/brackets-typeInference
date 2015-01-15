@@ -130,9 +130,13 @@ define(function (require, exports, module) {
 				var suggestionsForId = self.suggestions[suggestionId];
 				var $selectElement = $("<select />").attr("data-suggestionId", suggestionId); 
 				for (var i = 0; i < suggestionsForId.length; i++) {
+					var text = JSON.stringify(suggestionsForId[i]); 
+					if (text.length > 50) {
+						text = text.substr(0, 25) + "..." + text.substr(-25);
+					}
 					var $option = $('<option></option>')
 						.attr("value", JSON.stringify(suggestionsForId[i]))
-						.text(JSON.stringify(suggestionsForId[i]));
+						.text(text);
 					$selectElement.append($option);
 				}
 				
