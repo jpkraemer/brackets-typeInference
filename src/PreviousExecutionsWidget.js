@@ -146,7 +146,9 @@ define(function (require, exports, module) {
 	PreviousExecutionsWidget.prototype._updateTemplate = function() {
 		var functionIdentifierSegments = this.functionIdentifier.split("-");
 		var functionIndex = functionIdentifierSegments.lastIndexOf("function");
-		var functionName = functionIdentifierSegments.slice(functionIndex + 1, -1).join("-");
+		var functionName = functionIdentifierSegments.slice(functionIndex + 1).join("-");
+		var functionNameSegments = functionName.split("."); 
+		functionName = _.last(functionNameSegments);
 		
 		var functionCall = functionName + "("; 
 		var suggestionWithMaxArguments = _.max(this.suggestions, function (suggestion) {
@@ -208,6 +210,7 @@ define(function (require, exports, module) {
 
 		for (var i = 0; i < this.suggestions.length; i++) {
 			var suggestion = this.suggestions[i];
+			var text;
 
 			var $tableRow = $("<tr />").appendTo($callsTable); 
 
@@ -215,10 +218,18 @@ define(function (require, exports, module) {
 				var argument = suggestion.arguments[j];
 				var $td = $("<td />").appendTo($tableRow);
 				if (argument !== undefined) {
-					CodeMirror.runMode(argument.value, "javascript", $td.get(0));
+					text = argument.value;
+					if (text.length > 50) {
+						text = text.substr(0, 25) + "..." + text.substr(-25);
+					}
+					CodeMirror.runMode(text, "javascript", $td.get(0));
 				}				
 			}
-			
+
+			text = suggestion.returnValue; 
+			if (text.length > 50) {
+				text = text.substr(0, 25) + "..." + text.substr(-25);
+			}
 			$("<td />").text(suggestion.returnValue).appendTo($tableRow);
 
 			var $addButton = $("<a />").text("Add Testcase").on("click", this.onAddButtonClicked.bind(this, i));
