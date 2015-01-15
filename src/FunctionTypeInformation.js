@@ -246,6 +246,10 @@ define(function (require, exports, module) {
 
 		var result = false; 
 
+		if (typeSpec === undefined) {
+			return result;
+		}
+
 		if (this.type === typeSpec.type) {
 			
 			switch (this.type) {
@@ -447,12 +451,14 @@ define(function (require, exports, module) {
 			if (this.returnType === undefined) {
 				if (result.returnType !== undefined) {
 					this.returnType = new TypeInformation();
-					this.returnType.type = result.returnType;
+					this.returnType.type = result.returnType.type;
 				}
-			} else if (! this.returnType.type.matchesTypeSpec(result.returnType)) {
-				this.returnType.conflicts[result.theseusInvocationId] = result.returnType;
-			} else {
-				this.returnType.type = this.returnType.type.typeByMergingWithType(result.returnType);
+			} else if (result.returnType !== undefined) {
+				if (! this.returnType.type.matchesTypeSpec(result.returnType.type)) {
+					this.returnType.conflicts[result.theseusInvocationId] = result.returnType;
+				} else {
+					this.returnType.type = this.returnType.type.typeByMergingWithType(result.returnType.type);
+				}
 			}
 		}
 

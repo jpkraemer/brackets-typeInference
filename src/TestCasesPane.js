@@ -246,7 +246,9 @@ define(function (require, exports, module) {
 		if (DocumentManager.getCurrentDocument() === doc) { 
 			this.updateTestCases();
 			this.testCaseCollection.save().done(function () {
-				this.testSuite = this.testCaseCollection.getTestSuiteForId(this.testSuiteId);
+				if (this.testSuiteId) {
+					this.testSuite = this.testCaseCollection.getTestSuiteForId(this.testSuiteId);
+				}
 				this._update();
 			}.bind(this));
 		}

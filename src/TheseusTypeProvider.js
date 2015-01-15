@@ -67,7 +67,8 @@ define(function (require, exports, module) {
 
 			resultToPassOn.lastArguments = result.arguments; 
 			if (result.returnValue !== undefined) {
-				resultToPassOn.returnType = thesusTypeToTypeSpec(result.returnValue.typeSpec); 
+				resultToPassOn.returnType = new TypeInformation();
+				resultToPassOn.returnType.type = thesusTypeToTypeSpec(result.returnValue.typeSpec); 
 			}
 
 			resultsToPassOn.push(resultToPassOn); 
