@@ -104,7 +104,11 @@ define(function (require, exports, module) {
 			var functionsInFile = Agent.functionsInFile(path);
 
 			_.remove(functionsInFile, function (functionInFile) {
-				return (_.find(_tracedFunctions, { id: functionInFile.id }) !== undefined);
+				if (_.find(_tracedFunctions, { id: functionInFile.id }) !== undefined) {
+					return true; 
+				} else {
+					return !(/(.*)\-function\-[^\-]*$/.test(functionInFile.id));
+				}
 			});
 
 			if (functionsInFile.length !== 0) {
