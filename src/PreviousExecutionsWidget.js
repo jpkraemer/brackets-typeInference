@@ -117,6 +117,19 @@ define(function (require, exports, module) {
 			return string.slice(0, match.index) + newString + string.slice(match.index + match[0].length);
 		};
 
+		var prepareValueForTemplate = function (value) { 
+			var parsedValue = JSON.parse(value);
+			var result;
+			
+			if ((typeof(parsedValue) === "object") && (! Array.isArray(parsedValue))) {
+				result = value.replace(/,"__theseus.*?":".*?"/g, "");
+			} else {
+				result = value; 
+			}
+
+			return result; 
+		};
+
 		var code = this._preparedTemplateString; 
 		var suggestion = this.suggestions[suggestionIndex]; 
 		var argumentsByPlaceholderName = _.indexBy(suggestion.arguments, function (argument, index) {
@@ -125,15 +138,23 @@ define(function (require, exports, module) {
 
 		// var placeholderRegex = ;
 		var match; 
+		var value;
 
 		while ((match = /__(.+?)__/g.exec(code)) !== null) {
+			value = "undefined";
+
 			if (match[1] === "returnValue") {
-				code = stringReplaceMatchWithString(code, match, suggestion.returnValue);
+				if (suggestion.returnValue !== undefined) {
+					value = prepareValueForTemplate(suggestion.returnValue);
+				}
 			} else {
 				var argument = argumentsByPlaceholderName[match[1]]; 
-				var value = (argument !== undefined) ? argument.value : "undefined"; 
-				code = stringReplaceMatchWithString(code, match, value);
+				if (argument !== undefined) {
+					value = prepareValueForTemplate(argument.value); 
+				}
 			}
+			
+			code = stringReplaceMatchWithString(code, match, value);
 		}
 
 		return code;
