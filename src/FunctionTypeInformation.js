@@ -228,13 +228,13 @@ define(function (require, exports, module) {
 				result = this.type;
 		}
 
-		if (this.count !== undefined) {
-			if (typeof this.count === "number") {
-				result += "." + this.count; 
-			} else {
-				result += "." + this.count.min + "-" + this.count.max;
-			}
-		}
+		// if (this.count !== undefined) {
+		// 	if (typeof this.count === "number") {
+		// 		result += "." + this.count; 
+		// 	} else {
+		// 		result += "." + this.count.min + "-" + this.count.max;
+		// 	}
+		// }
 
 		return result;
 	};
