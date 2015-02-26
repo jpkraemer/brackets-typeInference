@@ -80,7 +80,7 @@ define(function (require, exports, module) {
 		} while (_.keys(this.testSuites).indexOf(newSuiteId) > -1); 
 
 
-		this.testSuites[newSuiteId] = _.cloneDeep(this.testSuiteTemplate);
+		this.testSuites[newSuiteId] = this.testSuiteTemplate;
 		this.testSuites[newSuiteId].id = newSuiteId;
 		this.testSuites[newSuiteId].title = title;
 
@@ -189,7 +189,7 @@ define(function (require, exports, module) {
 					var suiteId = suiteNameComponents[0];
 					var suiteName = suiteNameComponents.slice(1).join(SEPARATOR);
 
-					testSuites[suiteId] = _.cloneDeep(this.testSuiteTemplate);
+					testSuites[suiteId] = this.testSuiteTemplate;
 					testSuites[suiteId].id = suiteId;
 					testSuites[suiteId].title = suiteName;
 
@@ -230,10 +230,18 @@ define(function (require, exports, module) {
 								testSuites[suiteId].tests.push(testCase);
 							} else if (node.expression.callee.name === "beforeEach") {
 								foundFirstJasmineNode = true;
-								testSuites[suiteId].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+								if (node.expression.arguments[0] !== undefined) {
+									testSuites[suiteId].beforeEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+								} else {
+									testSuites[suiteId].beforeEach.code = "";
+								}
 							} else if (node.expression.callee.name === "afterEach") {
 								foundFirstJasmineNode = true;
-								testSuites[suiteId].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+								if (node.expression.arguments[0] !== undefined) {
+									testSuites[suiteId].afterEach.code = extractCodeFromLocation(node, node.expression.arguments[0].loc);
+								} else {
+									testSuites[suiteId].afterEach.code = "";
+								}
 							}
 						} else if (! foundFirstJasmineNode) {
 							beforeAllNodes.push(node);
