@@ -118,14 +118,14 @@ define(function (require, exports, module) {
 		};
 
 		var prepareValueForTemplate = function (value) { 
-			var parsedValue = JSON.parse(value);
-			var result;
+			// var parsedValue = JSON.parse(value);
+			var result = value.replace(/,"__theseus.*?":".*?"/g, "");
 			
-			if ((typeof(parsedValue) === "object") && (! Array.isArray(parsedValue))) {
-				result = value.replace(/,"__theseus.*?":".*?"/g, "");
-			} else {
-				result = value; 
-			}
+			// if ((typeof(parsedValue) === "object") && (! Array.isArray(parsedValue))) {
+			// 	result = 
+			// } else {
+			// 	result = value; 
+			// }
 
 			return result; 
 		};
@@ -153,7 +153,7 @@ define(function (require, exports, module) {
 					value = prepareValueForTemplate(argument.value); 
 				}
 			}
-			
+
 			code = stringReplaceMatchWithString(code, match, value);
 		}
 
@@ -232,14 +232,16 @@ define(function (require, exports, module) {
 		for (var i = 0; i < this.suggestions.length; i++) {
 			var suggestion = this.suggestions[i];
 			var text;
+			var $td;
 
 			var $tableRow = $("<tr />").appendTo($callsTable); 
 
 			for (var j = 0; j < argumentCount; j++) {
 				var argument = suggestion.arguments[j];
-				var $td = $("<td />").appendTo($tableRow);
-				if (argument !== undefined) {
+				$td = $("<td />").appendTo($tableRow);
+				if ((argument !== undefined) && (argument.value !== undefined)) {
 					text = argument.value;
+					text = text.replace(/,"__theseus.*?":".*?"/g, "");
 					if (text.length > 50) {
 						text = text.substr(0, 25) + "..." + text.substr(-25);
 					}
@@ -248,10 +250,12 @@ define(function (require, exports, module) {
 			}
 
 			text = suggestion.returnValue; 
+			text = text.replace(/,"__theseus.*?":".*?"/g, "");
 			if (text.length > 50) {
 				text = text.substr(0, 25) + "..." + text.substr(-25);
 			}
-			$("<td />").text(suggestion.returnValue).appendTo($tableRow);
+			$td = $("<td />").appendTo($tableRow);
+			CodeMirror.runMode(text, "javascript", $td.get(0));
 
 			var $addButton = $("<a />").text("Add Testcase").on("click", this.onAddButtonClicked.bind(this, i));
 			$("<td />").append($addButton).appendTo($tableRow);
@@ -265,10 +269,18 @@ define(function (require, exports, module) {
 		var newSuggestions = [];
 		
 		var argumentMappingFunction = function (argument) {
-			return {
+			var result = {
 				name: argument.name,
 				value: argument.value.json
 			};
+
+			// if (argument.value.type === "string") {
+			// 	result.value = result.value.substr(1, result.value.length - 2); 
+			// 	result.value = result.value.replace(/"/g, "\\\"");
+			// 	result.value = "\"" + result.value + "\"";
+			// }
+
+			return result; 
 		};
 
 		for (var i = 0; i < results.length; i++) {
