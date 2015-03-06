@@ -93,12 +93,8 @@ define(function (require, exports, module) {
 	function TypeSpec (jsdocType) {
 		_.bindAll(this);
 
-		if (jsdocType !== undefined) {
-			//sanity check
-			if ((jsdocType === null) || (jsdocType.type === null)) {
-				return;
-			}
-
+		if ((jsdocType) && (jsdocType.type !== null)) {
+			
 			switch (jsdocType.type) {
 				case "NameExpression":
 					var name = jsdocType.name; 
@@ -497,7 +493,7 @@ define(function (require, exports, module) {
 
 		if (propertiesFromJSDoc.argumentTypes !== undefined) {
 			if (editedPartTypeSpecifier.partType === "description") {
-				Array.unshift.apply(this.argumentTypes, propertiesFromJSDoc.argumentTypes);
+				Array.prototype.unshift.apply(this.argumentTypes, propertiesFromJSDoc.argumentTypes);
 			} else if (editedPartTypeSpecifier.partType === "return") {
 				this.argumentTypes = this.argumentTypes.concat(propertiesFromJSDoc.argumentTypes);
 			}
@@ -510,32 +506,43 @@ define(function (require, exports, module) {
 	 * @return {object} 
 	 */
 	FunctionTypeInformation.prototype._parseJSDocString = function(jsdocString) {
-		var jsdoc = doctrine.parse(jsdocString, { recoverable: true });
+		var jsdoc; 
+		try {
+			jsdoc = doctrine.parse(jsdocString, { recoverable: true });
+		} catch (e) {
+			TIUtils.log(e);
+		}; 
+
 		var result = {};
 
-		result.description = jsdoc.description === null ? undefined : jsdoc.description; 
+		if (jsdoc) {
+			result.description = jsdoc.description === null ? undefined : jsdoc.description; 
 
-		for (var i = 0; i < jsdoc.tags.length; i++) {
-			var jsdocTag = jsdoc.tags[i]; 
+			for (var i = 0; i < jsdoc.tags.length; i++) {
+				var jsdocTag = jsdoc.tags[i]; 
 
-			switch (jsdocTag.title) {
-				case "param":
-					var typeInformation = new TypeInformation(jsdocTag);
-					
-					if (result.argumentTypes === undefined) {
-						result.argumentTypes = [];
-					}
+				switch (jsdocTag.title) {
+					case "param":
+						var typeInformation = new TypeInformation(jsdocTag);
+						
+						if (result.argumentTypes === undefined) {
+							result.argumentTypes = [];
+						}
 
-					result.argumentTypes.push(typeInformation);
-					break;
-				case "return": 
-					result.returnType = new TypeInformation(jsdocTag);
-					break;
-				default: 
-					if (jsdocTag.title !== "uniqueFunctionIdentifier") {
-						TIUtils.log("Unknown JSDoc Tag: ", jsdocTag.title);
-					}
+						result.argumentTypes.push(typeInformation);
+						break;
+					case "return": 
+						result.returnType = new TypeInformation(jsdocTag);
+						break;
+					default: 
+						if (jsdocTag.title !== "uniqueFunctionIdentifier") {
+							TIUtils.log("Unknown JSDoc Tag: ", jsdocTag.title);
+						}
+				}
 			}
+		} else {
+			result.description = jsdocString;
+			result.description = result.description.replace(/\n^\s*@uniqueFunctionIdentifier .*$/m, "");
 		}
 
 		return result; 
