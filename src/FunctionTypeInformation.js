@@ -434,6 +434,10 @@ define(function (require, exports, module) {
 			for (var j = 0; j < this.argumentTypes.length; j++) {
 				var argumentType = this.argumentTypes[j];
 				var argumentTypeUpdate = result.argumentTypes[j];
+				if (argumentTypeUpdate === undefined) {
+					continue;
+				}
+				
 				if (argumentType.name !== argumentTypeUpdate.name) {
 					argumentType.name = argumentTypeUpdate.name;
 				}
