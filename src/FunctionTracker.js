@@ -295,7 +295,7 @@ define(function (require, exports, module) {
 						var parentNode = node.parent;
 						while (parentNode) {
 							var parentName;
-							if (parentNode.id !== undefined) {
+							if (parentNode.id) {
 								parentName = parentNode.id.name;
 							} else if (parentNode.type === "Program") {
 								parentName = parentNode.type;
