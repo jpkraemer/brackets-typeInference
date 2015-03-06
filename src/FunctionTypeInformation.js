@@ -313,7 +313,7 @@ define(function (require, exports, module) {
 		if (result.type !== typeSpec.type) {
 			var tmp = new TypeSpec(); 
 			tmp.type = "multiple"; 
-			tmp.spec = [ result, new TypeSpec(typeSpec.toJSDoc()) ];
+			tmp.spec = [ result, typeSpec.copy() ];
 			result = tmp; 
 		} else {
 			//merge spec
@@ -437,7 +437,7 @@ define(function (require, exports, module) {
 				if (argumentTypeUpdate === undefined) {
 					continue;
 				}
-				
+
 				if (argumentType.name !== argumentTypeUpdate.name) {
 					argumentType.name = argumentTypeUpdate.name;
 				}
