@@ -148,8 +148,9 @@ define(function (require, exports, module) {
 			};
 
 			this._content.push(newEntry);
-			this.selectionIndex = this._content.length - 1;
-
+			this._selectionIndex = this._content.length - 1;
+			this._updateTextContainer();
+			
 			this.$popup.hide();
 			this._updatePopup(); 
 

@@ -30,7 +30,7 @@ define(function (require, exports, module) {
 	GeneratedTestCaseCollection.prototype.codeCacheByFile = undefined;
 	GeneratedTestCaseCollection.prototype.functionTrackerCacheByFile = undefined;
 
-	GeneratedTestCaseCollection.prototype.getTestSuiteForId = function(id) {
+	GeneratedTestCaseCollection.prototype.getTestSuiteForId = function(id, name) {
 		var result = this.parentClass.getTestSuiteForId.call(this, id);
 
 		if (result === undefined) {

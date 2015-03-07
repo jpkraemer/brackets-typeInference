@@ -69,8 +69,15 @@ define(function (require, exports, module) {
 		return _.mapValues(this.testSuites, "title");
 	};
 
-	TestCaseCollection.prototype.getTestSuiteForId = function (id) {
-		return this.testSuites[id];
+	TestCaseCollection.prototype.getTestSuiteForId = function (id, name) {
+		var result = this.testSuites[id]; 
+		if ((result === undefined) && (name !== undefined)) {
+			return this.newTestSuiteWithTitle(name); 
+		} else if (result !== undefined) {
+			return result;
+		} else {
+			return undefined;
+		}
 	};
 
 	TestCaseCollection.prototype.newTestSuiteWithTitle = function(title) {

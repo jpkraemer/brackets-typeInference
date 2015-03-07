@@ -347,7 +347,7 @@ define(function (require, exports, module) {
 		this.updateTestCases();
 
 		if (this.testSuiteId !== undefined) {
-			this.testSuite = this.testCaseCollection.getTestSuiteForId(this.testSuiteId);
+			this.testSuite = this.testCaseCollection.getTestSuiteForId(this.testSuiteId, this._suiteSelector.value);
 		} else {
 			this.testSuite = undefined;
 		}
