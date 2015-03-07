@@ -511,20 +511,24 @@ define(function (require, exports, module) {
 	 */
 	DocumentationInlineEditor.prototype._clickHandler = function(event) {
 		var $target = $(event.currentTarget);
-
+		var newDocPartSpecifier; 
+			
 		if ($target.hasClass('ti-property')) {
 			var argumentId = $target.data("argumentId"); 
 			if (argumentId !== undefined) {
-				this.docPartSpecifier = { partType: "parameters", id: argumentId }; 
+				newDocPartSpecifier = { partType: "parameters", id: argumentId }; 
 			} else {
-				this.docPartSpecifier = { partType: "return" }; 
+				newDocPartSpecifier = { partType: "return" }; 
 			}            
 		} else {
-			this.docPartSpecifier = { partType: "description" }; 
+			newDocPartSpecifier = { partType: "description" }; 
 		}
 
-		this._displayEditorForPartOfTypeInfo();
-		event.stopPropagation();
+		if ((newDocPartSpecifier) && (!_.isEqual(newDocPartSpecifier, this.docPartSpecifier))) { 
+			this.docPartSpecifier = newDocPartSpecifier;
+			this._displayEditorForPartOfTypeInfo();
+			event.stopPropagation();	
+		}		
 	};
 
 	/**
