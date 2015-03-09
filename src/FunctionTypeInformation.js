@@ -406,6 +406,7 @@ define(function (require, exports, module) {
 			}.bind(this));
 		}
 
+		this._theseusDidReceiveTypeInformation(undefined, TheseusTypeProvider, TheseusTypeProvider.recentTypeInformationForFunctionIdentifier(functionIdentifier));
 		$(TheseusTypeProvider).on("didReceiveTypeInformation", this._theseusDidReceiveTypeInformation);
 	}
 

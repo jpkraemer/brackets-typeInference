@@ -21,9 +21,7 @@ define(function (require, exports, module) {
 		}, _newLogsHandler); 
 	}
 
-	function _newLogsHandler (results) {
-		results = _.sortBy(results, "invocationId");
-		var resultsToPassOn = [];
+	function theseusResultToPassOn(result) {
 
 		var thesusTypeToTypeSpec  = function (theseusType) {
 			var result = new TypeSpec();
@@ -47,35 +45,44 @@ define(function (require, exports, module) {
 			return result;
 		};
 
-		var mappingFunction = function(element, index) {
+		var resultToPassOn = { 
+			functionIdentifier: result.nodeId,
+			theseusInvocationId: result.invocationId
+		};
+
+		var argumentNames = _.pluck(result.arguments, "name");
+		resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").map(function(element, index) {
 			var result = new TypeInformation();
 			result.name = argumentNames[index];
 			result.type = thesusTypeToTypeSpec(element);
 			return result;
-		};
+		}).value();
+
+		resultToPassOn.lastArguments = result.arguments; 
+		if (result.returnValue !== undefined) {
+			resultToPassOn.returnType = new TypeInformation();
+			resultToPassOn.returnType.type = thesusTypeToTypeSpec(result.returnValue.typeSpec); 
+		}
+
+		return resultToPassOn; 
+	}
+
+	function _newLogsHandler (results) {
+		results = _.sortBy(results, "invocationId");
+		var resultsToPassOn = [];
 
 		for (var i = 0; i < results.length; i++) {
-			var result = results[i]; 
-
-			var resultToPassOn = { 
-				functionIdentifier: result.nodeId,
-				theseusInvocationId: result.invocationId
-			};
-
-			var argumentNames = _.pluck(result.arguments, "name");
-			resultToPassOn.argumentTypes = _.chain(result.arguments).pluck("value").pluck("typeSpec").map(mappingFunction).value();
-
-			resultToPassOn.lastArguments = result.arguments; 
-			if (result.returnValue !== undefined) {
-				resultToPassOn.returnType = new TypeInformation();
-				resultToPassOn.returnType.type = thesusTypeToTypeSpec(result.returnValue.typeSpec); 
-			}
-
-			resultsToPassOn.push(resultToPassOn); 
+			resultsToPassOn.push(theseusResultToPassOn(results[i])); 
 		}
 			
 		$(exports).trigger("didReceiveTypeInformation", [ exports, resultsToPassOn, true ]); 
 	}
 
+	function recentTypeInformationForFunctionIdentifier (functionIdentifier) {
+		var results = _.filter(TheseusAgentWrapper.cachedResults(), { nodeId: functionIdentifier }); 
+		return results.map(theseusResultToPassOn);
+	}
+
     exports.init = init; 
+    exports.recentTypeInformationForFunctionIdentifier = recentTypeInformationForFunctionIdentifier;
 });

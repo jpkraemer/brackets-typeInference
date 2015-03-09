@@ -55,6 +55,15 @@ define(function (require, exports, module) {
         setInterval(_updateLoop, 100);
 	});
 
+ 	/**
+ 	 * Returns a shallow copy of the _cachedResults array
+ 	 * @return {Array} Shallow copy of _cachedResults - all results received in the current session 
+ 	 */
+ 	function cachedResults() {
+ 		//return a shallow copy
+ 		return _cachedResults.slice(); 
+ 	}
+
 	/**
 	 * Register for Updates from theseus. Filter can be either compatible with lodash's _.filter function or be an array of 
 	 * function identifiers. 
@@ -189,4 +198,5 @@ define(function (require, exports, module) {
     exports.registerForTheseusUpdates = registerForTheseusUpdates;
     exports.unregisterForTheseusUpdates = unregisterForTheseusUpdates;
     exports.callingInvocationForFunctionInvocation = callingInvocationForFunctionInvocation; 
+    exports.cachedResults = cachedResults; 
 });
