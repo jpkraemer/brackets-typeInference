@@ -55,6 +55,7 @@ define(function (require, exports, module) {
 		}).fail(function (err) {
 			$button.removeClass('ti-loading');
 			TIUtils.log(err);
+			$(exports).trigger("updatedError", [ err ]);
 		});
 	}
 

@@ -180,6 +180,10 @@
 			});
 		};
 
+		var onException = function () {
+			errback(errorString);
+		};
+
 		var cleanup = function () {
 			if (fs.existsSync(reportPath) && (fs.statSync(reportPath).isDirectory())) {
 				var files = fs.readdirSync(reportPath);
@@ -200,13 +204,21 @@
 		specPath = path.resolve(specPath);
 
 		if (fs.existsSync(specPath) && (fs.statSync(specPath).isDirectory())) {
+			var errorString = "";
+
 			reportPath = path.join(specPath, "/reports/");
 			nodeTheseusProcess = spawn(process.execPath, jasminePath.split(" ").concat([ "--junitreport",  "--output", reportPath, specPath ]));
+
+			nodeTheseusProcess.stderr.on("data", function (data) {
+				errorString += data.toString();
+			});
 
 			nodeTheseusProcess.stdout.on("data", function (data) {
 				if (/Finished\ in/.test(data.toString())) {
 					onComplete();
-				} 
+				} else if (/Exception\ loading/.test(data.toString())) {
+					onException();
+				}
 			});
 		}
 	}
