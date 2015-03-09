@@ -181,7 +181,9 @@
 		};
 
 		var onException = function () {
+
 			errback(errorString);
+			cleanup();
 		};
 
 		var cleanup = function () {
