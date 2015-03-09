@@ -282,7 +282,7 @@ define(function (require, exports, module) {
 			resultPromise.resolve();
 		});
 
-		this._testSuites = this._parseTestFromCode(code);
+		// this._testSuites = this._parseTestFromCode(code);
 
 		return resultPromise.promise();
 	};
