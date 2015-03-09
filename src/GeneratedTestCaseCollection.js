@@ -31,20 +31,30 @@ define(function (require, exports, module) {
 	GeneratedTestCaseCollection.prototype.functionTrackerCacheByFile = undefined;
 
 	GeneratedTestCaseCollection.prototype.getTestSuiteForId = function(id, name) {
-		var result = this.parentClass.getTestSuiteForId.call(this, id);
+		return this.parentClass.getTestSuiteForId.call(this, id, id);
 
-		if (result === undefined) {
-			var functionName = this._functionNameFromFunctionIdentifier(id);
+		// if (result === undefined) {
+		// 	var functionName = this._functionNameFromFunctionIdentifier(id);
 			
-			result = this.testSuiteTemplate;
-			result.id = id;
-			result.title = "Tests for " + functionName;
-			result.beforeEach.code = "function () {\n    " + functionName + " = " + this._functionCodeVariableNameForFunctionName(functionName) + ";\n}";
-			result.beforeAll.code = "var " + functionName + ";";
+		// 	result = this.testSuiteTemplate;
+		// 	result.id = id;
+		// 	result.title = "Tests for " + functionName;
+		// 	result.beforeEach.code = "function () {\n    " + functionName + " = " + this._functionCodeVariableNameForFunctionName(functionName) + ";\n}";
+		// 	result.beforeAll.code = "var " + functionName + ";";
 
-			this.testSuites[id] = result;
-		}
+		// 	this.testSuites[id] = result;
+		// }
 
+		// return result;
+	};
+
+	GeneratedTestCaseCollection.prototype.newTestSuiteWithTitle = function(id) {
+		var functionName = this._functionNameFromFunctionIdentifier(id);
+		var result = this.testSuiteTemplate;
+		result.id = id;
+		result.title = "Tests for " + functionName;
+		// result.beforeEach.code = "function () {\n    " + functionName + " = " + this._functionCodeVariableNameForFunctionName(functionName) + ";\n}";
+		result.beforeAll.code = "var " + functionName + ";";
 		return result;
 	};
 
@@ -66,106 +76,106 @@ define(function (require, exports, module) {
 		return "__" + functionName + "Code__";
 	};
 
-	GeneratedTestCaseCollection.prototype._generateAstForSuite = function (testSuite) {
-		var extendAst = function () {
-			var functionInformation = functionTracker.getFunctionInformationForIdentifier(testSuite.id);
-			if (functionInformation === undefined) {
-				//happens if a method was deleted
-				resultPromise.resolve({});
-			} else {
-				var functionRange = functionInformation.functionRange;
-				var codeLines = code.split("\n").slice(functionRange.start.line, functionRange.end.line + 1); 
+	// GeneratedTestCaseCollection.prototype._generateAstForSuite = function (testSuite) {
+	// 	var extendAst = function () {
+	// 		var functionInformation = functionTracker.getFunctionInformationForIdentifier(testSuite.id);
+	// 		if (functionInformation === undefined) {
+	// 			//happens if a method was deleted
+	// 			resultPromise.resolve({});
+	// 		} else {
+	// 			var functionRange = functionInformation.functionRange;
+	// 			var codeLines = code.split("\n").slice(functionRange.start.line, functionRange.end.line + 1); 
 				
-				codeLines[0] = codeLines[0].substr(functionRange.start.ch); 
-				var argumentsMatch = codeLines[0].match(/function.*?(\(.*?\))/);
-				var argumentsString; 
-				if (argumentsMatch !== null) {
-					argumentsString = argumentsMatch[1];
-				}
-				codeLines[0] = codeLines[0].substr(codeLines[0].indexOf("{"));
+	// 			codeLines[0] = codeLines[0].substr(functionRange.start.ch); 
+	// 			var argumentsMatch = codeLines[0].match(/function.*?(\(.*?\))/);
+	// 			var argumentsString; 
+	// 			if (argumentsMatch !== null) {
+	// 				argumentsString = argumentsMatch[1];
+	// 			}
+	// 			codeLines[0] = codeLines[0].substr(codeLines[0].indexOf("{"));
 
-				codeLines[codeLines.length - 1] = codeLines[codeLines.length - 1].substr(0, functionRange.end.ch);
-				var functionCode = "var " + 
-					this._functionCodeVariableNameForFunctionName(this._functionNameFromFunctionIdentifier(testSuite.id)) + 
-					" = function " + 
-					argumentsString +
-					" " +
-					codeLines.join("\n"); 
+	// 			codeLines[codeLines.length - 1] = codeLines[codeLines.length - 1].substr(0, functionRange.end.ch);
+	// 			var functionCode = "var " + 
+	// 				this._functionCodeVariableNameForFunctionName(this._functionNameFromFunctionIdentifier(testSuite.id)) + 
+	// 				" = function " + 
+	// 				argumentsString +
+	// 				" " +
+	// 				codeLines.join("\n"); 
 
-				result.expression.arguments[1].body.body.push({
-		    		type: "ExpressionStatement", 
-		    		expression: {
-		        		type: "Literal",
-		        		xVerbatimProperty: {
-							content: functionCode,
-							precedence: Escodegen.Precedence.Primary
-						}
-					}
-		    	});
+	// 			result.expression.arguments[1].body.body.push({
+	// 	    		type: "ExpressionStatement", 
+	// 	    		expression: {
+	// 	        		type: "Literal",
+	// 	        		xVerbatimProperty: {
+	// 						content: functionCode,
+	// 						precedence: Escodegen.Precedence.Primary
+	// 					}
+	// 				}
+	// 	    	});
 
-				resultPromise.resolve(result);
-			}
-		}.bind(this);
+	// 			resultPromise.resolve(result);
+	// 		}
+	// 	}.bind(this);
 
-		var result = TestCaseCollection.prototype._generateAstForSuite.call(this, testSuite);
+	// 	var result = TestCaseCollection.prototype._generateAstForSuite.call(this, testSuite);
 
-		var resultPromise = new $.Deferred();
+	// 	var resultPromise = new $.Deferred();
 
-		var path = testSuite.id.match(/(.*)\-function\-[^\/]*$/)[1];
-		var code = this.codeCacheByFile[path]; 
-		var functionTracker = this.functionTrackerCacheByFile[path]; 
-		if (code === undefined) {
-			DocumentManager.getDocumentForPath(path).done(function (document) {
+	// 	var path = testSuite.id.match(/(.*)\-function\-[^\/]*$/)[1];
+	// 	var code = this.codeCacheByFile[path]; 
+	// 	var functionTracker = this.functionTrackerCacheByFile[path]; 
+	// 	if (code === undefined) {
+	// 		DocumentManager.getDocumentForPath(path).done(function (document) {
 
-				code = document.getText();
-				functionTracker = document.functionTracker;
-				this.codeCacheByFile[path] = code;
-				this.functionTrackerCacheByFile[path] = functionTracker; 
+	// 			code = document.getText();
+	// 			functionTracker = document.functionTracker;
+	// 			this.codeCacheByFile[path] = code;
+	// 			this.functionTrackerCacheByFile[path] = functionTracker; 
 
-				extendAst();
+	// 			extendAst();
 				
-			}.bind(this));
-		} else {
-			extendAst();
-		}
+	// 		}.bind(this));
+	// 	} else {
+	// 		extendAst();
+	// 	}
 
-		return resultPromise.promise();
-	};
+	// 	return resultPromise.promise();
+	// };
 
-	GeneratedTestCaseCollection.prototype.save = function () {
-		var resultPromise = new $.Deferred();
-		var resultAst = {
-		    type: "Program",
-		    body: []
-		};
+	// GeneratedTestCaseCollection.prototype.save = function () {
+	// 	var resultPromise = new $.Deferred();
+	// 	var resultAst = {
+	// 	    type: "Program",
+	// 	    body: []
+	// 	};
 
-		var testSuitesCount = _.values(this.testSuites).length;
-		var completedCount = 0; 
+	// 	var testSuitesCount = _.values(this.testSuites).length;
+	// 	var completedCount = 0; 
 
-		this.codeCacheByFile = {}; 
-		this.functionTrackerCacheByFile = {};
+	// 	this.codeCacheByFile = {}; 
+	// 	this.functionTrackerCacheByFile = {};
 
-		 _.each(this.testSuites, function (testSuite) {
-		 	this._generateAstForSuite(testSuite).done(function (suiteAst) {
-		 		if (! _.isEmpty(suiteAst)) {
-			 		resultAst.body.push(suiteAst);
-			 	}
+	// 	 _.each(this.testSuites, function (testSuite) {
+	// 	 	this._generateAstForSuite(testSuite).done(function (suiteAst) {
+	// 	 		if (! _.isEmpty(suiteAst)) {
+	// 		 		resultAst.body.push(suiteAst);
+	// 		 	}
 		 		
-		 		completedCount++; 
-		 		if (completedCount === testSuitesCount) {
-		 			var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 
+	// 	 		completedCount++; 
+	// 	 		if (completedCount === testSuitesCount) {
+	// 	 			var code = Escodegen.generate(resultAst, { verbatim: "xVerbatimProperty", comment: true }); 
 
-					this.file.write(code, function () {
-						resultPromise.resolve();
-					}.bind(this));
+	// 				this.file.write(code, function () {
+	// 					resultPromise.resolve();
+	// 				}.bind(this));
 
-					this._testSuites = this._parseTestFromCode(code);
-		 		}
-		 	}.bind(this));
-		 }.bind(this));
+	// 				this._testSuites = this._parseTestFromCode(code);
+	// 	 		}
+	// 	 	}.bind(this));
+	// 	 }.bind(this));
 
-		 return resultPromise.promise();
-	};
+	// 	 return resultPromise.promise();
+	// };
 
 	module.exports = GeneratedTestCaseCollection;
 });
