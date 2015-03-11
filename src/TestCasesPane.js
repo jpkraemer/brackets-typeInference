@@ -353,9 +353,13 @@ define(function (require, exports, module) {
 
 		if (this.testSuiteId !== undefined) {
 			this.testSuite = this.testCaseCollection.getTestSuiteForId(this.testSuiteId, this._suiteSelector.value);
+			if (this.testSuite.id !== this.testSuiteId) {
+				this._updateTestSuiteList();
+			}
 		} else {
 			this.testSuite = undefined;
 		}
+
 		this._update();
 	};
 
