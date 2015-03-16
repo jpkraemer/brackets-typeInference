@@ -74,7 +74,7 @@ define(function (require, exports, module) {
 			var argumentType = typeInformation.argumentTypes[i]; 
 			var argumentSuggestion = []; 
 
-			switch (argumentType.type) {
+			switch (argumentType.type.type) {
 				case "number": 
 					argumentSuggestion = argumentSuggestion.concat([ 0, 1, -1, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY ]); 
 					break; 
