@@ -31,7 +31,7 @@ define(function (require, exports, module) {
 		if (typeInformation) {
 			var functionIdentifierSegments = typeInformation.functionIdentifier.split("-");
 			var functionIndex = functionIdentifierSegments.lastIndexOf("function");
-			var functionName = functionIdentifierSegments.slice(functionIndex + 1, -1).join("-");
+			var functionName = functionIdentifierSegments.slice(functionIndex + 1).join("-").split(".").pop();
 
 			var result = []; 
 			var argumentSuggestions = _suggestArgumentValues(typeInformation);
