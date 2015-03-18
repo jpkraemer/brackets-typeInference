@@ -527,8 +527,8 @@ define(function (require, exports, module) {
 		if ((newDocPartSpecifier) && (!_.isEqual(newDocPartSpecifier, this.docPartSpecifier))) { 
 			this.docPartSpecifier = newDocPartSpecifier;
 			this._displayEditorForPartOfTypeInfo();
-			event.stopPropagation();	
 		}		
+		event.stopPropagation();
 	};
 
 	/**
