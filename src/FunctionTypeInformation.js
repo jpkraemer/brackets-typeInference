@@ -165,7 +165,7 @@ define(function (require, exports, module) {
 			}
 		} else { 
 			this.type = ""; 
-			this.name = "";
+			// this.name = "";
 		}
 	}
 
