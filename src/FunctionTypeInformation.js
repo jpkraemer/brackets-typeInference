@@ -70,7 +70,11 @@ define(function (require, exports, module) {
 			return undefined;
 		}
 
-		var result = this.conflicts[keys[0]];
+		var firstConflict = this.conflicts[keys[0]];
+		var result = new TypeInformation(); 
+		result.name = firstConflict.name;
+		result.description = firstConflict.description;
+		result.type = firstConflict.type.typeByMergingWithType(this.type);
 
 		for (var i = 1; i < keys.length; i++) {
 			var currentConflict = this.conflicts[keys[i]];

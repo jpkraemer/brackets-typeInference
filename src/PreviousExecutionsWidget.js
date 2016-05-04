@@ -191,7 +191,7 @@ define(function (require, exports, module) {
 	PreviousExecutionsWidget.prototype._renderTemplate = function() {
 		this.$editorHolder.empty();
 
-		var $cm = $("<div />").addClass('CodeMirror cm-s-default CodeMirror-wrap'); 
+		var $cm = $("<div />").addClass('CodeMirror cm-s-light CodeMirror-wrap'); 
 		var $cmScroll = $("<div />").addClass('CodeMirror-scroll').appendTo($cm); 
 		var $cmSizer = $("<div />").addClass('CodeMirror-sizer').css({ "margin-left": "60px" }).appendTo($cmScroll);
 		var $cmLines = $("<div />").addClass('CodeMirror-lines').appendTo($cmSizer);

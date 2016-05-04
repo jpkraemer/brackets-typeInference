@@ -95,16 +95,16 @@ define(function (require, exports, module) {
 				result = type.type.charAt(0).toUpperCase() + type.type.slice(1);
 		}
 
-		if ((type.hasOwnProperty("count")) && (type.count !== undefined)) {
-			result += "<em>("; 
-			if (typeof type.count === "number"){
-				result += type.count;
-			} else {
-				result += type.count.min + "-" + type.count.max;
-			}
+		// if ((type.hasOwnProperty("count")) && (type.count !== undefined)) {
+		// 	result += "<em>("; 
+		// 	if (typeof type.count === "number"){
+		// 		result += type.count;
+		// 	} else {
+		// 		result += type.count.min + "-" + type.count.max;
+		// 	}
 
-			result += "x)</em>";
-		}
+		// 	result += "x)</em>";
+		// }
 
 		return result;
 	}

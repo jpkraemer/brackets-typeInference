@@ -8,6 +8,7 @@ define(function (require, exports, module) {
 	var AppInit						= brackets.getModule("utils/AppInit");
 	var DocumentationInlineEditor 	= require("./src/DocumentationInlineEditor");
 	var DocumentManger				= brackets.getModule("document/DocumentManager");
+	var MainViewManager				= brackets.getModule("view/MainViewManager");
 	var EditorManager				= brackets.getModule("editor/EditorManager");
 	var ExtensionUtils				= brackets.getModule("utils/ExtensionUtils");
 	var JSUtils						= brackets.getModule("language/JSUtils");
@@ -40,7 +41,8 @@ define(function (require, exports, module) {
 		ScopeManagerExtensions.init();
 		SessionExtensions.init();
 
-		$(DocumentManger).on("currentDocumentChange", _currentDocumentChange);
+		// $(DocumentManger).on("currentDocumentChange", _currentDocumentChange);
+		$(MainViewManager).on("currentFileChange", _currentDocumentChange);
 		_currentDocumentChange(null, DocumentManger.getCurrentDocument());
 
 		testCasesPane = new TestCasesPane();
@@ -53,6 +55,7 @@ define(function (require, exports, module) {
 	 * @param  {Document} previousDocument
 	 */
 	function _currentDocumentChange (evt, newCurrentDocument, previousDocument) {
+		newCurrentDocument = DocumentManger.getCurrentDocument();
 		if (currentDocument === newCurrentDocument) {
 			return;
 		}

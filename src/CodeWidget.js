@@ -27,7 +27,7 @@ define(function (require, exports, module) {
 			$localEditorHolder.html(element);
 		}, {
 			mode: "javascript",
-            theme: "default",
+            theme: "light",
             lineNumbers: true,
             lineWrapping: true,
 			value: ""

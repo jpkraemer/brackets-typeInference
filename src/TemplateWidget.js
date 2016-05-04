@@ -112,14 +112,14 @@ define(function (require, exports, module) {
 	};
 
 	TemplateWidget.prototype._renderTemplate = function() {
-		var $cm = $("<div />").addClass('CodeMirror cm-s-default CodeMirror-wrap'); 
+		var $cm = $("<div />").addClass('CodeMirror cm-s-light CodeMirror-wrap'); 
 		var $cmScroll = $("<div />").addClass('CodeMirror-scroll').appendTo($cm); 
 		var $cmSizer = $("<div />").addClass('CodeMirror-sizer').css({ "margin-left": "60px" }).appendTo($cmScroll);
 		var $cmLines = $("<div />").addClass('CodeMirror-lines').appendTo($cmSizer);
 		var $cmCode = $("<div />").addClass('CodeMirror-code').appendTo($cmLines);
 
 		var $lines = $("<div />");
-		CodeMirror.runMode(this.templateString, "javascript", $lines.get(0)); 
+		CodeMirror.runMode(this.templateString, { name: "javascript", theme: "light" }, $lines.get(0)); 
 
 		var self = this;
 		
