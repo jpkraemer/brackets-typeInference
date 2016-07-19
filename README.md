@@ -1,6 +1,10 @@
-# Type Inference
+# Vesta
 
-Type inference is a Brackets plugin that tries to bring type information back to Javascript. It leverages runtime information as well as static analysis to determine the types of function arguments. This information is used to automatically keep documentation up to date, warn about inconsistencies and to improve Bracket's autocompletion. 
+Vesta is an authoring interface for documentation and unit tests. It leverages runtime information to determine the types of function arguments. This information is used to automatically keep documentation up to date, warn about inconsistencies and to improve Bracket's autocompletion. Developers can create unit tests based on recorded invocations of functions, and use the type information to get suggestions for common edge-case tests.
+
+Vesta is a prototype for research on the interaction design for authroing documentation and unit tests. It is *not* intended for productive work. We make no guarantees that it works reliably, or at all. Use on your own risk. 
+
+You can learn more about our research at http://hci.rwth-aachen.de/vesta or check out our [CHI 2016 paper](http://doi.acm.org/10.1145/2858036.2858311). 
 
 ## Installation 
 
