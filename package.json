@@ -9,7 +9,7 @@
 	"dependencies" : {
 		"connect" : "2.3.4",
 		"mime" : "1.2.4",
-		"http-proxy" : "0.8.7",
+		"http-proxy" : "1.18.1",
 		"fondue" : "0.5.x"
 	},
 	"engines" : {
