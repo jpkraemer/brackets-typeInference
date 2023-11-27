@@ -7,7 +7,7 @@
 	"author" : "Jan-Peter Kraemer <jpk@cs.rwth-aachen.de>",
 	"license" : "MIT",
 	"dependencies" : {
-		"connect" : "2.3.4",
+		"connect" : "2.3.7",
 		"mime" : "1.2.4",
 		"http-proxy" : "0.8.7",
 		"fondue" : "0.5.x"
